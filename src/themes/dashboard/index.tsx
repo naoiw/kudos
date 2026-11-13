@@ -129,6 +129,9 @@ function Dashboard() {
         ))}
       </div>
 
+      <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
+        デモ表示：掲載中のアクティビティとGPS経路は架空のサンプルデータです。
+      </div>
       <Suspense
         fallback={
           <main
