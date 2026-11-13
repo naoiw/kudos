@@ -40,15 +40,41 @@ export function RouteMapCanvas({
   const styleReadyRef = useRef(false);
   const cameraRef = useRef<mapboxgl.CameraOptions | null>(null);
   const fittedRef = useRef<unknown>(null);
-  const [provider, setProvider] = useState(MAPBOX_TOKEN ? 'mapbox' : 'carto');
+  const [provider, setProvider] = useState<'mapbox' | 'osm'>(MAPBOX_TOKEN ? 'mapbox' : 'osm');
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading'
   );
   const [retry, setRetry] = useState(0);
-  const style =
+  // A self-contained raster style does not require a Mapbox token or remote
+  // vector-style metadata, sprite sheets, or fonts.
+  const style: string | mapboxgl.StyleSpecification =
     provider === 'mapbox'
       ? `mapbox://styles/mapbox/${dark === false ? 'light' : 'dark'}-v11`
-      : `https://basemaps.cartocdn.com/gl/${dark === false ? 'positron' : 'dark-matter'}-gl-style/style.json`;
+      : {
+          version: 8,
+          sources: {
+            'openstreetmap': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
+            },
+          },
+          layers: [
+            {
+              id: 'basemap',
+              type: 'raster',
+              source: 'openstreetmap',
+              paint: dark === false
+                ? {}
+                : {
+                    'raster-brightness-max': 0.67,
+                    'raster-saturation': -0.6,
+                  },
+            },
+          ],
+        };
 
   const displayActivity = useMemo(
     () =>
@@ -165,7 +191,7 @@ export function RouteMapCanvas({
       ...cameraRef.current,
       locale: zh
         ? {
-            'Map.Title': '跑步ルートマップ',
+            'Map.Title': 'ルートマップ',
             'NavigationControl.ZoomIn': '拡大',
             'NavigationControl.ZoomOut': '縮小',
             'NavigationControl.ResetBearing': '北を上に戻す',
@@ -203,18 +229,16 @@ export function RouteMapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    let failed = false;
     const onError = (event: mapboxgl.ErrorEvent) => {
-      const code = (event.error as Error & { status?: number }).status;
-      if (provider === 'mapbox' && (code === 401 || code === 403)) {
-        setProvider('carto');
-      } else {
-        failed = true;
-        setStatus('error');
+      // A map can still render when an individual resource fails to load.
+      // Never mark the entire map as broken for a recoverable tile error.
+      console.warn('Map resource warning:', event.error);
+      if (provider === 'mapbox') {
+        setProvider('osm');
       }
     };
     const onIdle = () => {
-      if (!failed) setStatus('ready');
+      if (map.isStyleLoaded()) setStatus('ready');
     };
     const onLoading = () => setStatus('loading');
     map.on('error', onError);
@@ -324,7 +348,7 @@ export function RouteMapCanvas({
           <div className="route-map-empty" role="status">
             {zh
               ? selectedActivity
-                ? '这件没有 GPS 轨迹'
+                ? 'このアクティビティにはGPS経路がありません'
                 : '条件に一致するGPS経路がありません'
               : 'No GPS route available'}
           </div>
@@ -340,23 +364,23 @@ export function RouteMapCanvas({
               ? zh
                 ? '地図を読み込み中…'
                 : 'Loading map…'
-              : provider === 'carto'
+              : provider === 'osm'
                 ? zh
-                  ? '代替地図 · CARTO'
-                  : 'Alternative basemap · CARTO'
+                  ? '背景地図 · OpenStreetMap'
+                  : 'Basemap · OpenStreetMap'
                 : zh
                   ? '地図 · Mapbox'
                   : 'Basemap · Mapbox'}
         </span>
-        {(status === 'error' || (provider === 'carto' && !!MAPBOX_TOKEN)) && (
+        {(status === 'error' || (provider === 'osm' && !!MAPBOX_TOKEN)) && (
           <button
             className="route-map-action"
             onClick={() => {
-              setProvider(MAPBOX_TOKEN ? 'mapbox' : 'carto');
+              setProvider(MAPBOX_TOKEN ? 'mapbox' : 'osm');
               setRetry((value) => value + 1);
             }}
           >
-            {provider === 'carto' && MAPBOX_TOKEN
+            {provider === 'osm' && MAPBOX_TOKEN
               ? zh
                 ? 'Mapboxを再試行'
                 : 'Retry Mapbox'
