@@ -47,7 +47,7 @@ export function RouteMapCanvas({
   const [retry, setRetry] = useState(0);
   // A self-contained raster style does not require a Mapbox token or remote
   // vector-style metadata, sprite sheets, or fonts.
-  const style: string | mapboxgl.StyleSpecification =
+  const style = useMemo<string | mapboxgl.StyleSpecification>(() =>
     provider === 'mapbox'
       ? `mapbox://styles/mapbox/${dark === false ? 'light' : 'dark'}-v11`
       : {
@@ -74,7 +74,7 @@ export function RouteMapCanvas({
                   },
             },
           ],
-        };
+        }, [provider, dark]);
 
   const displayActivity = useMemo(
     () =>
