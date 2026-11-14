@@ -1,7 +1,107 @@
 {
   "schema_version": 1,
-  "mode": "unpublished",
-  "generated_at": null,
-  "users": [],
-  "activities": []
+  "mode": "public-stats-preview",
+  "generated_at": "2026-11-14T14:32:36.420Z",
+  "date_precision": "month",
+  "users": [
+    {
+      "user_id": "u01",
+      "display_name": "ユーザー 1"
+    },
+    {
+      "user_id": "u02",
+      "display_name": "ユーザー 2"
+    },
+    {
+      "user_id": "u03",
+      "display_name": "ユーザー 3"
+    }
+  ],
+  "activities": [
+    {
+      "run_id": 2000001,
+      "user_id": "u02",
+      "name": "サイクリング",
+      "type": "Ride",
+      "distance": 77000,
+      "moving_time": "03:14:00",
+      "start_date": "2022-07-01T12:00:00",
+      "start_date_local": "2022-07-01T12:00:00",
+      "location_country": null,
+      "summary_polyline": null,
+      "average_heartrate": null,
+      "average_speed": 6.615,
+      "elevation_gain": 0,
+      "source": "public-preview",
+      "streak": 0
+    },
+    {
+      "run_id": 2000002,
+      "user_id": "u02",
+      "name": "サイクリング",
+      "type": "Ride",
+      "distance": 77900,
+      "moving_time": "02:57:00",
+      "start_date": "2022-06-08T12:00:00",
+      "start_date_local": "2022-06-08T12:00:00",
+      "location_country": null,
+      "summary_polyline": null,
+      "average_heartrate": null,
+      "average_speed": 7.335,
+      "elevation_gain": 10,
+      "source": "public-preview",
+      "streak": 0
+    },
+    {
+      "run_id": 2000003,
+      "user_id": "u02",
+      "name": "サイクリング",
+      "type": "Ride",
+      "distance": 31000,
+      "moving_time": "01:05:00",
+      "start_date": "2022-06-15T12:00:00",
+      "start_date_local": "2022-06-15T12:00:00",
+      "location_country": null,
+      "summary_polyline": null,
+      "average_heartrate": null,
+      "average_speed": 7.949,
+      "elevation_gain": 0,
+      "source": "public-preview",
+      "streak": 0
+    },
+    {
+      "run_id": 2000004,
+      "user_id": "u02",
+      "name": "サイクリング",
+      "type": "Ride",
+      "distance": 24200,
+      "moving_time": "01:56:00",
+      "start_date": "2022-06-22T12:00:00",
+      "start_date_local": "2022-06-22T12:00:00",
+      "location_country": null,
+      "summary_polyline": null,
+      "average_heartrate": null,
+      "average_speed": 3.477,
+      "elevation_gain": 10,
+      "source": "public-preview",
+      "streak": 0
+    },
+    {
+      "run_id": 2000005,
+      "user_id": "u02",
+      "name": "サイクリング",
+      "type": "Ride",
+      "distance": 56900,
+      "moving_time": "03:10:00",
+      "start_date": "2022-06-01T12:00:00",
+      "start_date_local": "2022-06-01T12:00:00",
+      "location_country": null,
+      "summary_polyline": null,
+      "average_heartrate": null,
+      "average_speed": 4.991,
+      "elevation_gain": 0,
+      "source": "public-preview",
+      "streak": 0
+    }
+  ]
 }
