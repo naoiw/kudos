@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { sportIcon, sportLabel } from '../core/sports';
 import { useLocale } from '../hooks/useLocale';
+import { formatActivityDate, activityYear } from '../core/datePrecision';
 import {
   formatDistance,
   parseMovingTime,
@@ -32,7 +33,7 @@ export const ProfileCard = memo(function ProfileCard({
   );
 
   const allDates = activities.map((a) =>
-    new Date(a.start_date_local).getFullYear()
+    activityYear(a.start_date_local)
   );
   const yearsActive =
     allDates.length > 0 ? Math.max(...allDates) - Math.min(...allDates) + 1 : 0;
@@ -67,22 +68,11 @@ export const ProfileCard = memo(function ProfileCard({
     activities.length > 0
       ? [...activities].sort(
           (a, b) =>
-            new Date(b.start_date_local).getTime() -
-            new Date(a.start_date_local).getTime()
+            b.start_date_local.localeCompare(a.start_date_local)
         )[0]
       : null;
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    if (locale === 'ja') {
-      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-    }
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  const formatDate = (dateStr: string) => formatActivityDate(dateStr, locale);
 
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/5 hover:shadow-[var(--color-accent)]/5 hover:shadow-lg">

@@ -12,6 +12,7 @@ import {
   formatPace,
 } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
+import { formatActivityDate, activityYear } from '../core/datePrecision';
 
 type SportType = Sport;
 const trackPlaceholders = Array.from({ length: 40 }, (_, id) => ({
@@ -150,7 +151,7 @@ export function TracksPage({
       activities.filter((a) => {
         if (
           selectedYear !== null &&
-          new Date(a.start_date_local).getFullYear() !== selectedYear
+          activityYear(a.start_date_local) !== selectedYear
         )
           return false;
         if (sportFilter !== null && a.type !== sportFilter) return false;
@@ -230,8 +231,9 @@ export function TracksPage({
       [...clusteredTracks].sort((a, b) =>
         sortBy === 'distance'
           ? b.representative.distance - a.representative.distance
-          : new Date(b.representative.start_date_local).getTime() -
-            new Date(a.representative.start_date_local).getTime()
+          : b.representative.start_date_local.localeCompare(
+              a.representative.start_date_local
+            )
       ),
     [clusteredTracks, sortBy]
   );
@@ -385,14 +387,7 @@ export function TracksPage({
                 {selectedActivity.name}
               </p>
               <p className="mb-2 text-[10px] text-[var(--color-muted)]">
-                {new Date(selectedActivity.start_date_local).toLocaleDateString(
-                  locale === 'ja' ? 'ja-JP' : 'en-US',
-                  { year: 'numeric', month: 'short', day: 'numeric' }
-                )}{' '}
-                {new Date(selectedActivity.start_date_local).toLocaleTimeString(
-                  locale === 'ja' ? 'ja-JP' : 'en-US',
-                  { hour: '2-digit', minute: '2-digit' }
-                )}
+                {formatActivityDate(selectedActivity.start_date_local, locale, true)}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -711,7 +706,7 @@ export function TracksPage({
                     onClick={() => setSortBy('date')}
                     className={`transition-colors ${sortBy === 'date' ? 'font-medium text-[var(--color-text)]' : 'hover:text-[var(--color-text)]'}`}
                   >
-                    {locale === 'ja' ? '時間' : 'Date'}
+                    {locale === 'ja' ? '日付順' : 'Date'}
                   </button>
                   <span className="text-[var(--color-border)]">/</span>
                   <button
