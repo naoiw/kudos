@@ -26,7 +26,6 @@ import { ProfileCard } from '@/components/ProfileCard';
 import { JapanMap } from '@/components/JapanMap';
 import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
-import { PersonalBest } from '@/components/PersonalBest';
 import { activityYear } from '@/core/datePrecision';
 
 const TracksPage = lazy(() =>
@@ -278,10 +277,6 @@ function Dashboard() {
                     onClearSelection={() => setSelectedActivity(null)}
                   />
                 </div>
-                <PersonalBest
-                  activities={activities}
-                  onSelectActivity={selectActivity}
-                />
                 {catalog.datePrecision !== 'month' && (
                   <CalendarWidget
                     key={year ?? 'all'}
