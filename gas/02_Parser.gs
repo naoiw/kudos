@@ -186,8 +186,11 @@ function kudosHaversine_(a, b) {
 
 function kudosInferSport_(hint, speedMetersPerSecond, distanceMeters) {
   const type = kudosText_(hint).toLowerCase();
-  if (/(running|jogging|run|footing)/.test(type)) {
-    return { sport: 'Run', confidence: 'explicit' };
+  if (/(golf)/.test(type)) {
+    return { sport: 'Golf', confidence: 'explicit' };
+  }
+  if (/(running|jogging|walking|hiking|walk|hike|run|footing)/.test(type)) {
+    return { sport: 'Walk', confidence: 'explicit' };
   }
   if (/(biking|cycling|bicycle|bike|ride|velocipede)/.test(type)) {
     return { sport: 'Ride', confidence: 'explicit' };
@@ -196,7 +199,7 @@ function kudosInferSport_(hint, speedMetersPerSecond, distanceMeters) {
   // Deliberately ambiguous around brisk running and low-speed cycling.
   if (speedKmh >= 18) return { sport: 'Ride', confidence: 'inferred' };
   if (speedKmh >= 3 && speedKmh <= 11 && distanceMeters <= 25000) {
-    return { sport: 'Run', confidence: 'inferred' };
+    return { sport: 'Walk', confidence: 'inferred' };
   }
   return { sport: 'Unknown', confidence: 'unknown' };
 }

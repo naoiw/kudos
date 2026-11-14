@@ -81,12 +81,13 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
 
   ids.forEach((id, i) => {
     const user = active.get(id);
-    const rows = activities.filter((row) =>
-      kudosText_(row.user_id) === id &&
-      kudosText_(row.review_status) === 'ok' &&
-      (kudosText_(row.sport_final) === 'Run' ||
-        kudosText_(row.sport_final) === 'Ride')
-    ).sort((a, b) => {
+    const rows = activities.filter((row) => {
+      if (kudosText_(row.user_id) !== id) return false;
+      const name = kudosText_(row.name_override) || kudosText_(row.name);
+      return kudosResolveSport_(
+        name, row.sport_detected || row.sport_final, row.sport_override
+      ).sport !== 'Unknown';
+    }).sort((a, b) => {
       return String(b.start_at_utc).localeCompare(String(a.start_at_utc));
     });
     rows.forEach((row, index) => {
@@ -102,7 +103,10 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
         ? local.slice(0, 8) +
           String(1 + (index * 7) % 28).padStart(2, '0') + 'T12:00:00'
         : local;
-      const sport = kudosText_(row.sport_final);
+      const activityName = kudosText_(row.name_override) || kudosText_(row.name);
+      const sport = kudosResolveSport_(
+        activityName, row.sport_detected || row.sport_final, row.sport_override
+      ).sport;
       const gain = Number(row.elevation_gain_m);
       const route = routesByFile && routesByFile.get(
         kudosLogKey_(id, kudosText_(row.drive_file_id))
@@ -112,8 +116,9 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
       publicActivities.push({
         run_id: runId,
         user_id: safeUsers[i].user_id,
-        name: kudosText_(row.name_override) || kudosText_(row.name) ||
-          (sport === 'Run' ? 'ランニング' : 'サイクリング'),
+        name: activityName ||
+          (sport === 'Ride' ? 'サイクリング' :
+            sport === 'Walk' ? 'ウォーキング' : 'ゴルフ'),
         type: sport,
         distance: distance,
         moving_time: kudosPreviewDuration_(seconds),
@@ -218,7 +223,10 @@ function kudosReadPreviewRoutes_(activities, userIds) {
     const userId = kudosText_(row.user_id);
     if (!selectedUsers.has(userId) ||
         kudosText_(row.review_status) !== 'ok' ||
-        !['Run', 'Ride'].includes(kudosText_(row.sport_final))) {
+        kudosResolveSport_(
+          kudosText_(row.name_override) || kudosText_(row.name),
+          row.sport_detected || row.sport_final, row.sport_override
+        ).sport === 'Unknown') {
       continue;
     }
     const fileId = kudosText_(row.drive_file_id);

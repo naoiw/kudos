@@ -40,6 +40,40 @@ const KUDOS_DEFAULT_SETTINGS = Object.freeze([
   ['public_preview_exact_dates_approval', 'disabled', 'Set I_APPROVE_EXACT_DATES only for non-sensitive demo activities'],
 ]);
 
+
+/**
+ * Supported public activity genres. Title and explicit user override take
+ * priority over GPX type hints or speed-based inference.
+ */
+function kudosNormalizeSport_(value) {
+  const sport = kudosText_(value).toLowerCase();
+  if (sport === 'ride' || sport === 'cycling') return 'Ride';
+  if (sport === 'walk' || sport === 'run' || sport === 'walking' ||
+      sport === 'hike' || sport === 'running') return 'Walk';
+  if (sport === 'golf') return 'Golf';
+  return '';
+}
+
+function kudosSportFromName_(name) {
+  const title = kudosText_(name).toLowerCase();
+  if (/ゴルフ|golf/.test(title)) return 'Golf';
+  if (/サイクリング|ライド|自転車|ポタリング|cycling|biking|bicycle|bike|ride/.test(title)) {
+    return 'Ride';
+  }
+  if (/ハイキング|ランニング|ジョギング|ウォーキング|ウォーク|散歩|登山|トレッキング|walking|hiking|jogging|running|walk|jog|run|trekking/.test(title)) {
+    return 'Walk';
+  }
+  return '';
+}
+
+function kudosResolveSport_(name, detected, override) {
+  const explicit = kudosNormalizeSport_(override);
+  if (explicit) return { sport: explicit, confidence: 'override' };
+  const fromName = kudosSportFromName_(name);
+  if (fromName) return { sport: fromName, confidence: 'title' };
+  return { sport: kudosNormalizeSport_(detected) || 'Unknown', confidence: 'inferred' };
+}
+
 const KUDOS_SPREADSHEET_PROPERTY = 'KUDOS_SPREADSHEET_ID';
 const KUDOS_TIMEZONE = 'Asia/Tokyo';
 
