@@ -103,7 +103,7 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
     }).sort((a, b) => {
       return String(b.start_at_utc).localeCompare(String(a.start_at_utc));
     });
-    rows.forEach((row, index) => {
+    rows.forEach((row) => {
       const local = kudosPreviewLocalDate_(row, kudosText_(user.timezone));
       if (!local) return;
       const distance = Math.round(Number(row.distance_m) / 100) * 100;
@@ -112,10 +112,8 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
           !Number.isFinite(rawSeconds) || rawSeconds < 0) return;
 
       const seconds = Math.max(60, Math.round(rawSeconds / 60) * 60);
-      const date = precision === 'month'
-        ? local.slice(0, 8) +
-          String(1 + (index * 7) % 28).padStart(2, '0') + 'T12:00:00'
-        : local;
+      // Month-only disclosure must never fabricate a calendar day or time.
+      const date = precision === 'month' ? local.slice(0, 7) : local;
       const activityName = kudosText_(row.name_override) || kudosText_(row.name);
       const sport = kudosResolveSport_(
         activityName, row.sport_detected || row.sport_final, row.sport_override
