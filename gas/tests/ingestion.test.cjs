@@ -824,6 +824,6 @@ test('export detects golf in legacy Ride records without forcing a new GPX impor
       timezone: 'Asia/Tokyo' }], _activities: rows }
   );
   assert.equal(result.genre_version, 1);
-  assert.deepEqual(result.activities.map((a) => a.type), ['Golf','Walk']);
+  assert.deepEqual(Array.from(result.activities, (a) => a.type), ['Golf', 'Walk']);
   assert.equal(result.activities.length, 2);
 });
