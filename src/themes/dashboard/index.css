@@ -54,6 +54,16 @@ body {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
+/* SVG paths have rectangular browser focus outlines that obscure nearby prefectures.
+   Preserve keyboard focus feedback using the prefecture's fill instead. */
+.dashboard .footprint-prefecture:focus {
+  outline: none;
+}
+.dashboard .footprint-prefecture:focus-visible {
+  outline: none;
+  filter: brightness(1.2);
+}
+
 .dashboard th,
 .dashboard td {
   padding-right: 12px;
