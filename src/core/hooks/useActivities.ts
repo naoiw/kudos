@@ -144,6 +144,49 @@ interface PreviewDocument {
   date_precision?: 'month' | 'exact';
   users: PublicPreviewUser[];
   activities: Activity[];
+  route_chunks?: string[];
+}
+
+interface RouteChunk {
+  schema_version: number;
+  routes: { run_id: number; route_segments: string[] }[];
+}
+
+/**
+ * Manifest version 2 stores route polylines in separate static JSON chunks.
+ * The manifest appears only after all files were committed in one transaction.
+ */
+async function loadRouteChunks(paths: string[]): Promise<Map<number, string[]>> {
+  const collected = new Map<number, string[]>();
+  // Limit concurrent downloads instead of flooding the server with 40+ files.
+  for (let start = 0; start < paths.length; start += 6) {
+    const group = await Promise.all(paths.slice(start, start + 6).map(async (path) => {
+      if (!/^data\/exports\/[a-z0-9]{16,48}\/chunk-\d{4}\.json$/.test(path)) {
+        throw new Error('Invalid route chunk path in preview manifest');
+      }
+      const response = await fetch(`${import.meta.env.BASE_URL}${path}`);
+      if (!response.ok) {
+        throw new Error(`Route chunk could not be fetched: ${path} (${response.status})`);
+      }
+      const chunk: RouteChunk = await response.json();
+      if (chunk.schema_version !== 1 || !Array.isArray(chunk.routes)) {
+        throw new Error(`Invalid route chunk format: ${path}`);
+      }
+      return chunk.routes;
+    }));
+    for (const routes of group) {
+      for (const route of routes) {
+        if (!Number.isInteger(route.run_id) || collected.has(route.run_id) ||
+            !Array.isArray(route.route_segments) ||
+            !route.route_segments.length ||
+            !route.route_segments.every((segment) => typeof segment === 'string')) {
+          throw new Error('Invalid or duplicated encoded route entry in preview');
+        }
+        collected.set(route.run_id, route.route_segments);
+      }
+    }
+  }
+  return collected;
 }
 
 let catalogCache: ActivityCatalog | null = null;
@@ -152,6 +195,7 @@ let catalogPromise: Promise<ActivityCatalog> | null = null;
 
 async function loadCatalog(): Promise<ActivityCatalog> {
   const previewUrl = `${import.meta.env.BASE_URL}data/preview.json`;
+  let manifestV2Detected = false;
   try {
     const response = await fetch(previewUrl, { cache: 'no-store' });
     if (response.ok) {
@@ -159,7 +203,7 @@ async function loadCatalog(): Promise<ActivityCatalog> {
       if (candidate && typeof candidate === 'object') {
         const doc = candidate as PreviewDocument;
         if (
-          doc.schema_version === 1 &&
+          (doc.schema_version === 1 || doc.schema_version === 2) &&
           doc.mode === 'public-stats-preview' &&
           Array.isArray(doc.users) &&
           doc.users.length > 0 &&
@@ -173,13 +217,37 @@ async function loadCatalog(): Promise<ActivityCatalog> {
           );
           const userIds = new Set(users.map((user) => user.user_id));
           if (users.length) {
-            const activities = doc.activities.filter(
-              (activity) =>
-                userIds.has(activity.user_id || '') &&
-                (activity.type === 'Run' || activity.type === 'Ride') &&
-                typeof activity.distance === 'number' &&
-                typeof activity.start_date_local === 'string'
-            );
+            manifestV2Detected = doc.schema_version === 2;
+            const routes = manifestV2Detected
+              ? await loadRouteChunks(
+                  Array.isArray(doc.route_chunks)
+                    ? doc.route_chunks
+                    : (() => { throw new Error('Missing route chunk index'); })()
+                )
+              : null;
+            const activities = doc.activities
+              .filter(
+                (activity) =>
+                  userIds.has(activity.user_id || '') &&
+                  (activity.type === 'Run' || activity.type === 'Ride') &&
+                  typeof activity.distance === 'number' &&
+                  typeof activity.start_date_local === 'string'
+              )
+              .map((activity) => {
+                if (!routes) return activity;
+                const segments = routes.get(activity.run_id);
+                if (!segments) throw new Error(
+                  `Missing GPS route for activity ${activity.run_id}`
+                );
+                return {
+                  ...activity,
+                  summary_polyline: segments[0] || null,
+                  route_segments: segments,
+                };
+              });
+            if (routes && routes.size !== activities.length) {
+              throw new Error('Route chunk count does not match published activities');
+            }
             return {
               users,
               activities,
@@ -192,6 +260,9 @@ async function loadCatalog(): Promise<ActivityCatalog> {
       }
     }
   } catch (error) {
+    // A published v2 manifest should never silently fall back to demo data.
+    // Missing chunks indicate a deployment or data issue that needs fixing.
+    if (manifestV2Detected) throw error;
     console.warn('Public preview unavailable; using synthetic demo:', error);
   }
 
