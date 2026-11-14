@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import type { Activity } from '../types';
 import { useLocale } from '../hooks/useLocale';
+import { SPORT_ORDER, sportLabel } from '../core/sports';
 import { formatPace } from '../hooks/useActivities';
 import {
   groupSummary,
@@ -201,7 +202,7 @@ export function SummaryPage({
   const [year, setYear] = useState('all');
   const [limit, setLimit] = useState(12);
   const sports = useMemo(
-    () => [...new Set(activities.map((a) => a.type))].sort(),
+    () => SPORT_ORDER.filter((kind) => activities.some((a) => a.type === kind)),
     [activities]
   );
   const years = useMemo(
@@ -256,7 +257,7 @@ export function SummaryPage({
               <option value="all">{zh ? 'すべての種目' : 'All sports'}</option>
               {sports.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {sportLabel(s, locale)}
                 </option>
               ))}
             </select>
