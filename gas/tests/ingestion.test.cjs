@@ -160,7 +160,13 @@ function createFixture() {
         setProperty: (key, value) => props.set(key, value),
       };
     } },
-    DriveApp: { getFolderById(id) {
+    DriveApp: {
+      getFileById(id) {
+        if (id === 'tracked-gpx') return fakeFile('tracked-gpx', 'run-gpx');
+        if (id === 'tracked-tcx') return fakeFile('tracked-tcx', 'bike-tcx');
+        throw new Error('File not shared');
+      },
+      getFolderById(id) {
       const files = folders.get(id);
       if (!files) throw new Error('Folder not shared');
       return {
@@ -306,7 +312,7 @@ test('two users are isolated by folder and source checksum', () => {
   assert.equal(acts.getRange(2, sportFinalColumn).getValues()[0][0], 'Ride');
 });
 
-test('public preview never emits private identifiers or GPS coordinates', () => {
+test('preview keeps spreadsheet display names without exporting account credentials', () => {
   const { evaluate } = createFixture();
   const users = [
     {
@@ -349,22 +355,21 @@ test('public preview never emits private identifiers or GPS coordinates', () => 
   assert.equal(result.activities.length, 1);
   assert.equal(result.users.length, 1);
   assert.equal(result.users[0].user_id, 'u01');
-  assert.equal(result.users[0].display_name, 'ユーザー 1');
+  assert.equal(result.users[0].display_name, 'Actual Name');
   const activity = result.activities[0];
   assert.equal(activity.user_id, 'u01');
   assert.equal(activity.summary_polyline, null);
   assert.equal(activity.location_country, null);
   assert.equal(activity.average_heartrate, null);
-  assert.equal(activity.name, 'サイクリング');
+  assert.equal(activity.name, 'Hospital visit');
   assert.ok(activity.start_date_local.startsWith('2026-11-'));
   assert.ok(activity.start_date_local.endsWith('T12:00:00'));
   assert.equal(activity.distance, 78000);
 
   const json = JSON.stringify(result);
   for (const forbidden of [
-    'private_alice', 'private_bob', 'Actual Name', 'a@private.example',
-    'home-to-office', 'Private Track', 'Hospital', '東京都',
-    'privategps', 'sensitive_folder', 'secretfile', 'private-source-hash',
+    'private_alice', 'private_bob', 'a@private.example',
+    'home-to-office', 'privategps', 'sensitive_folder', 'secretfile', 'private-source-hash',
     'sensitive_activity_id',
   ]) {
     assert.equal(json.includes(forbidden), false, forbidden + ' must be redacted');
@@ -391,7 +396,7 @@ test('public preview rejects publishing disabled users', () => {
   );
 });
 
-test('public preview replaces user details, titles and GPS with anonymous stats', () => {
+test('preview carries real display names and activity labels while withholding source IDs', () => {
   const { evaluate } = createFixture();
   const privateUsers = [
     {
@@ -431,11 +436,11 @@ test('public preview replaces user details, titles and GPS with anonymous stats'
   });
   assert.equal(obj.mode, 'public-stats-preview');
   assert.equal(obj.users[0].user_id, 'u01');
-  assert.equal(obj.users[0].display_name, 'ユーザー 1');
+  assert.equal(obj.users[0].display_name, 'Real Person');
   assert.equal(obj.activities.length, 1);
   const activity = obj.activities[0];
   assert.equal(activity.type, 'Ride');
-  assert.equal(activity.name, 'サイクリング');
+  assert.equal(activity.name, 'Doctor visit');
   assert.equal(activity.user_id, 'u01');
   assert.equal(activity.distance, 78100);
   assert.equal(activity.summary_polyline, null);
@@ -445,10 +450,10 @@ test('public preview replaces user details, titles and GPS with anonymous stats'
   assert.ok(activity.start_date_local.endsWith('T12:00:00'));
   const json = JSON.stringify(obj);
   for (const marker of [
-    'private_account', 'Real Person', 'private@example.org',
+    'private_account', 'private@example.org',
     'private-folder', 'private-activity-id', 'file-123',
     'my-home-track', 'secret-checksum', 'private home route',
-    'Doctor visit', '東京都', 'SECRET_GPS',
+    'SECRET_GPS',
   ]) {
     assert.equal(json.includes(marker), false, marker + ' must not be exported');
   }
@@ -477,4 +482,68 @@ test('unknown sport and activities needing review are omitted', () => {
     _users: users, _acts: acts,
   });
   assert.equal(p.activities.length, 0);
+});
+
+test('route encoder is compatible with Google polyline precision five', () => {
+  const { evaluate } = createFixture();
+  const result = evaluate('kudosEncodePolyline_(_points)', {
+    _points: [
+      { lat: 38.5, lng: -120.2 },
+      { lat: 40.7, lng: -120.95 },
+      { lat: 43.252, lng: -126.453 },
+    ],
+  });
+  assert.equal(result, '_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+});
+
+test('route extractor resolves the original Drive files and keeps separate GPS segments', () => {
+  const { evaluate } = createFixture();
+  const routeRows = [{
+    activity_id: 'a1', user_id: 'user_02', drive_file_id: 'tracked-gpx',
+    review_status: 'ok', sport_final: 'Run',
+  }, {
+    activity_id: 'a2', user_id: 'user_02', drive_file_id: 'tracked-tcx',
+    review_status: 'ok', sport_final: 'Ride',
+  }];
+  const routes = evaluate('kudosReadPreviewRoutes_(_rows, _users)', {
+    _rows: routeRows,
+    _users: ['user_02'],
+  });
+  assert.equal(routes.size, 2);
+  for (const key of ['user_02:tracked-gpx', 'user_02:tracked-tcx']) {
+    assert.equal(routes.get(key).length, 1);
+    assert.ok(routes.get(key)[0].length > 10);
+  }
+  const projection = evaluate(
+    'kudosBuildPublicPreview_(_people, _records, _selected, "exact", _now, _routes)',
+    {
+      _people: [{ user_id: 'user_02', display_name: 'Cyclist', enabled: true,
+        timezone: 'Asia/Tokyo' }],
+      _selected: ['user_02'],
+      _records: routeRows.map((row, index) => ({
+        ...row, start_at_utc: '2026-11-14T00:00:00Z',
+        distance_m: 10000 + index * 1000,
+        moving_time_s: 1200,
+        elevation_gain_m: 20,
+      })),
+      _now: '2026-11-14T10:00:00Z',
+      _routes: routes,
+    }
+  );
+  assert.equal(projection.users[0].display_name, 'Cyclist');
+  assert.equal(projection.activities.length, 2);
+  assert.ok(projection.activities.every((a) =>
+    typeof a.summary_polyline === 'string' && a.route_segments.length === 1
+  ));
+});
+
+test('separate GPX track segments are encoded separately instead of joined', () => {
+  const { evaluate } = createFixture();
+  const segments = [
+    [{ lat: 35, lng: 139 }, { lat: 35.001, lng: 139.002 }],
+    [{ lat: 36, lng: 140 }, { lat: 36.001, lng: 140.002 }],
+  ];
+  const result = evaluate('kudosEncodeRouteSegments_(_segments)', { _segments: segments });
+  assert.equal(result.length, 2);
+  assert.ok(result[0] !== result[1]);
 });
