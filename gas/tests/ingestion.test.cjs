@@ -238,7 +238,7 @@ test('parser handles valid GPX and explicit run sport', () => {
     _settings: { maxSpeed: 45, maxMovingGap: 180, minMovingSpeed: 0.5 },
   });
   assert.equal(parsed.format, 'GPX');
-  assert.equal(parsed.sportDetected, 'Run');
+  assert.equal(parsed.sportDetected, 'Walk');
   assert.equal(parsed.sportConfidence, 'explicit');
   assert.equal(parsed.startUtc, '2026-11-14T00:00:00.000Z');
   assert.ok(parsed.distanceMeters > 200 && parsed.distanceMeters < 240);
@@ -270,7 +270,7 @@ test('sport detection preserves ambiguous cases for manual review', () => {
   const { evaluate } = createFixture();
   assert.equal(evaluate("kudosInferSport_('', 3.5, 10000).sport"), 'Unknown');
   assert.equal(evaluate("kudosInferSport_('', 6.1, 40000).sport"), 'Ride');
-  assert.equal(evaluate("kudosInferSport_('', 2, 5000).sport"), 'Run');
+  assert.equal(evaluate("kudosInferSport_('', 2, 5000).sport"), 'Walk');
 });
 
 test('formula-like GPX names are escaped before storage', () => {
@@ -737,4 +737,93 @@ test('changed workbook metadata requires an explicit reset before continuing', (
   assert.throws(() => evaluate('publishApprovedPublicPreview()'), /resetPublicPreviewBatch/);
   evaluate('resetPublicPreviewBatch()');
   assert.equal(evaluate('showPublicPreviewProgress()').needs_reset, false);
+});
+
+
+test('activity names determine cycling, walking and golf categories before speed hints', () => {
+  const { evaluate } = createFixture();
+  const cases = [
+    ['ゴルフ場 18ホール', 'Ride', 'Golf'],
+    ['Golf practice', 'Run', 'Golf'],
+    ['朝のサイクリング', 'Run', 'Ride'],
+    ['多摩川ライド', 'Run', 'Ride'],
+    ['Cycle Ride', 'Run', 'Ride'],
+    ['ハイキング', 'Ride', 'Walk'],
+    ['夕方のランニング', 'Ride', 'Walk'],
+    ['ジョギング', 'Ride', 'Walk'],
+    ['ウォーキング', 'Ride', 'Walk'],
+    ['ウォーク', 'Ride', 'Walk'],
+    ['散歩', 'Ride', 'Walk'],
+    ['名前に手がかりなし', 'Run', 'Walk'],
+    ['名前に手がかりなし', 'Ride', 'Ride'],
+  ];
+  for (const [name, detected, expected] of cases) {
+    const resolved = evaluate('kudosResolveSport_(_name, _detected, "")', {
+      _name: name, _detected: detected,
+    });
+    assert.equal(resolved.sport, expected, name);
+  }
+  const manual = evaluate('kudosResolveSport_("ゴルフ", "Ride", "Walk")');
+  assert.equal(manual.sport, 'Walk', 'explicit override wins over title');
+});
+
+test('existing imported rows can be reclassified without reopening GPX files', () => {
+  const { evaluate, ss } = createFixture();
+  evaluate('setupSheets()');
+  const sheet = ss.getSheetByName('Activities');
+  const header = sheet.rows[0];
+  const items = [
+    { activity_id: 'a', name: '朝のゴルフ', sport_detected: 'Ride',
+      sport_final: 'Ride', review_status: 'ok' },
+    { activity_id: 'b', name: 'ハイキング', sport_detected: 'Ride',
+      sport_final: 'Ride', review_status: 'ok' },
+    { activity_id: 'c', name: 'ジョギング', sport_detected: 'Run',
+      sport_final: 'Run', review_status: 'ok' },
+    { activity_id: 'd', name: '朝のゴルフ', name_override: '多摩川サイクリング',
+      sport_detected: 'Ride', sport_final: 'Ride', review_status: 'ok' },
+    { activity_id: 'e', name: 'ゴルフ', sport_detected: 'Run',
+      sport_override: 'Ride', sport_final: 'Ride', review_status: 'ok' },
+    { activity_id: 'f', name: 'Unknown activity', sport_detected: 'Unknown',
+      sport_final: 'Unknown', review_status: 'needs_review' },
+    { activity_id: 'g', name: '新しいウォーキング',
+      sport_detected: 'Unknown', sport_final: 'Unknown', review_status: 'needs_review' },
+  ];
+  sheet.getRange(2, 1, items.length, header.length).setValues(items.map((row) =>
+    header.map((key) => row[key] ?? '')
+  ));
+  const changed = evaluate('applyActivityOverrides()');
+  assert.ok(changed > 0);
+  const f = header.indexOf('sport_final');
+  const detected = header.indexOf('sport_detected');
+  const status = header.indexOf('review_status');
+  assert.deepEqual(sheet.rows.slice(1).map((row) => row[f]),
+    ['Golf','Walk','Walk','Ride','Ride','Unknown','Walk']);
+  assert.deepEqual(sheet.rows.slice(1).map((row) => row[detected]),
+    ['Golf','Walk','Walk','Ride','Golf','Unknown','Walk']);
+  assert.equal(sheet.rows[6][status], 'needs_review');
+  assert.equal(sheet.rows[7][status], 'ok');
+  assert.equal(evaluate('applyActivityOverrides()'), 0, 'second run is idempotent');
+});
+
+test('export detects golf in legacy Ride records without forcing a new GPX import', () => {
+  const { evaluate } = createFixture();
+  const rows = [
+    { user_id: 'user_02', name: 'ゴルフ', sport_final: 'Ride', sport_detected: 'Ride',
+      review_status: 'ok', start_at_utc: '2026-11-13T00:00:00Z',
+      distance_m: 8500, moving_time_s: 11000, elevation_gain_m: 5 },
+    { user_id: 'user_02', name: 'ウォーキング', sport_final: 'Run',
+      sport_detected: 'Run', review_status: 'ok', start_at_utc: '2026-11-12T00:00:00Z',
+      distance_m: 7000, moving_time_s: 5400, elevation_gain_m: 5 },
+    { user_id: 'user_02', name: 'Unknown', sport_final: 'Unknown',
+      sport_detected: 'Unknown', review_status: 'needs_review',
+      start_at_utc: '2026-11-11T00:00:00Z', distance_m: 1000, moving_time_s: 900 },
+  ];
+  const result = evaluate(
+    'kudosBuildPublicPreview_(_people, _activities, ["user_02"], "month", "now")',
+    { _people: [{ user_id: 'user_02', display_name: 'Test', enabled: true,
+      timezone: 'Asia/Tokyo' }], _activities: rows }
+  );
+  assert.equal(result.genre_version, 1);
+  assert.deepEqual(result.activities.map((a) => a.type), ['Golf','Walk']);
+  assert.equal(result.activities.length, 2);
 });
