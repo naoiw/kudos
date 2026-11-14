@@ -10,6 +10,7 @@ export interface Activity {
   start_date_local: string;
   location_country: string | null;
   summary_polyline: string | null;
+  route_segments?: string[]; // Disjoint GPX/TCX segments; encoded polyline precision 5.
   average_heartrate: number | null;
   average_speed: number; // m/s
   elevation_gain: number | null;

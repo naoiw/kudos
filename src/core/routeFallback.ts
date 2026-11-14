@@ -3,39 +3,44 @@ import polyline from '@mapbox/polyline';
 type MappedActivity = {
   start_date_local: string;
   summary_polyline?: string | null;
+  route_segments?: string[];
 };
 
 const routeCache = new WeakMap<
   MappedActivity,
-  { polyline: MappedActivity['summary_polyline']; valid: boolean }
+  { polyline: MappedActivity['summary_polyline']; segments: MappedActivity['route_segments']; valid: boolean }
 >();
 
 export const hasRoute = (activity: MappedActivity): boolean => {
   const cached = routeCache.get(activity);
-  if (cached && cached.polyline === activity.summary_polyline)
+  if (cached && cached.polyline === activity.summary_polyline &&
+      cached.segments === activity.route_segments)
     return cached.valid;
   const valid = validateRoute(activity);
-  routeCache.set(activity, { polyline: activity.summary_polyline, valid });
+  routeCache.set(activity, {
+    polyline: activity.summary_polyline, segments: activity.route_segments, valid,
+  });
   return valid;
 };
 
 const validateRoute = (activity: MappedActivity): boolean => {
-  if (!activity.summary_polyline) return false;
-  try {
-    const points = polyline.decode(activity.summary_polyline);
-    return (
-      points.length >= 2 &&
-      points.every(
-        ([lat, lng]) =>
+  const segments = activity.route_segments?.length
+    ? activity.route_segments
+    : activity.summary_polyline ? [activity.summary_polyline] : [];
+  return segments.some((segment) => {
+    try {
+      const points = polyline.decode(segment);
+      return points.length >= 2 &&
+        points.every(([lat, lng]) =>
           Number.isFinite(lat) &&
           Number.isFinite(lng) &&
           Math.abs(lat) <= 90 &&
           Math.abs(lng) <= 180
-      )
-    );
-  } catch {
-    return false;
-  }
+        );
+    } catch {
+      return false;
+    }
+  });
 };
 
 /** Choose a route for display without copying it into the selected activity. */

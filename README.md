@@ -72,12 +72,12 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 
 ## Sheetsの統計プレビュー（ユーザー切り替え）
 
-管理用Google Sheetsの活動をKudosへ表示するため、GASに `publishApprovedPublicPreview()` を用意しています。管理者が公開を承認すると、距離・種目・運動時間などの**統計のみ**を `public/data/preview.json` に書き出します。
+管理用Google Sheetsの活動をKudosへ表示するため、GASに `publishApprovedPublicPreview()` を用意しています。管理者が手動実行すると、距離・種目・運動時間のほか、**Usersの表示名とDriveのGPX/TCXから生成した経路**を `public/data/preview.json` に書き出します。
 
 - 公開サイトのユーザー切り替えは `?u=u01`、`?u=u02` などのURLで利用できます。
 - 未承認の場合は従来の架空データを表示します。
 - 公開する統計情報は**インターネット上の誰でも閲覧可能**です。
-- ユーザー名やメール、GPSルートは含めません。日時は初期設定で月単位に匿名化します。
-- 本物のGPS経路を複数ユーザーで閲覧する仕組みには、認証と権限制御が別途必要です。
+- 表示名とGPSルートは含まれます。メールやDriveのファイルIDは含めません。日時は従来の設定に従います。
+- 現在のGitHub Pagesは公開サイトのため、GPX経路は誰でも閲覧できます。非公開運用する場合は認証と権限制御が別途必要です。
 
 詳細な設定は [GASセットアップ手順](gas/README.md#7-ウェブ画面へ統計プレビューを反映する手動公開許可制) を参照してください。
