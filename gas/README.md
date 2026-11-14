@@ -241,3 +241,7 @@ Webアプリ側でも旧形式の公開JSONについてタイトルを用いた�
 ## 10. ソースコードをclaspで同期する
 
 `main`のGASコードは[claspソース同期手順](../docs/gas-clasp-sync.md)に沿って更新します。ローカル/手動GitHub Actionsのどちらも、Apps Scriptの**ソースのみ**を更新します。`KUDOS_SPREADSHEET_ID`・`KUDOS_GITHUB_TOKEN`・Sheets・Drive・インストール型トリガーには触れません。実際のApps Scriptへ接続するためのGoogleアカウント認証とScript IDの設定は管理者が行ってください。**定期実行は有効にしないでください。**
+
+## 11. 種目判定ルールの更新
+
+`gas/00_Config.gs`の生成済み定義は直接変更しないでください。共通ルール[`shared/sport-rules.json`](../shared/sport-rules.json)を更新し、`node scripts/generate-sport-rules.cjs`を実行します。変更後は`node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs`を実行してください。GAS反映は従来どおりclaspの明示的な手動操作のみです。定期トリガーは有効化しません。

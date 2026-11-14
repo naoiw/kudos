@@ -21,10 +21,12 @@ jobs:
           PATH_PREFIX: /kudos
         run: pnpm build
 
-      - name: Validate GAS sources and clasp sync allowlist
-        run: node scripts/verify-gas-sync.cjs
+      - name: Check shared sport rules and GAS source safety
+        run: |
+          node scripts/generate-sport-rules.cjs --check
+          node scripts/verify-gas-sync.cjs
 
-      - name: Test Apps Script parser, ingestion, and clasp safety
+      - name: Test Apps Script parser, shared sport contract, and clasp safety
         run: node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs
 
       - name: Check real clasp 3.4.1 file selection without authentication

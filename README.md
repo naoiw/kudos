@@ -104,3 +104,9 @@ Kudosの種目は**サイクリング・ウォーキング・ゴルフ**の3種�
 ## GASソース同期（clasp）
 
 GitHubの`main`をGASソースの正本とし、[Issue #23の手順](docs/gas-clasp-sync.md)に従って`clasp`で**明示的に**既存Apps Scriptプロジェクトへ同期します。CIには手動起動専用の`Sync Kudos Apps Script source`を追加しています。通常のPR・`main`へのpushではGASに反映されません。認証情報・Script ID・Script PropertiesはGitへ保存しません。**定期GASトリガーは無効のまま**です。
+
+## 種目分類ルールの管理（Issue #21）
+
+種目の別名、タイトルキーワード、優先順位は[`shared/sport-rules.json`](shared/sport-rules.json)が正本です。TypeScriptはJSONを直接読み込み、GASは`gas/00_Config.gs`に埋め込んだ自動生成済み定義を使います。
+
+ルールを編集した場合は`node scripts/generate-sport-rules.cjs`を実行し、生成されたGASの変更もコミットしてください。CIと`node scripts/verify-gas-sync.cjs`は生成済み定義の整合性を検査します。GASとTypeScriptの一致は`shared/sport-contract-cases.json`を使用した契約テストで確認します。詳しくは[`docs/sport-rules.md`](docs/sport-rules.md)を参照してください。
