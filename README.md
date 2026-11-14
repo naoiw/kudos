@@ -1,8 +1,8 @@
 # Kudos
 
-ランニング・サイクリングのアクティビティを記録・表示するWebアプリです。
+サイクリング・ウォーキング・ゴルフのアクティビティを記録・表示する複数ユーザー対応Webアプリです。
 
-**公開予定URL:** https://naoiw.github.io/kudos/
+**公開URL:** https://naoiw.github.io/kudos/
 
 ## 現在の開発範囲
 
@@ -10,8 +10,8 @@
 - [x] 日本語UI、英語のソースコードコメント
 - [x] GitHub Pages のプロジェクトパス `/kudos/` 対応
 - [x] 架空のサンプルデータ（実際のGPS・個人情報は含まない）
-- [x] Google Drive + Apps ScriptのGPX/TCX取り込みコード（実際のDrive・Sheetsへの設定と稼働は未完了）
-- [ ] ユーザー別データの読み込みとページ切替
+- [x] Google Drive + Apps ScriptによるGPX/TCX取り込み、Sheets管理と明示的なJSON公開
+- [x] 公開JSONからの複数ユーザー読み込みとユーザー切替
 - [ ] Google認証とユーザー単位の閲覧制限
 - [ ] 公開経路のプライバシーフィルター
 
@@ -68,7 +68,7 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 
 複数人のGoogle Driveフォルダを巡回して、1アクティビティ1行で非公開Google Sheetsへ取り込む仕組みを `gas/` に追加しています。初期セットアップと設定方法は [gas/README.md](gas/README.md) を参照してください。
 
-**公開中のWebページは引き続きサンプルデータのみ**を使用しており、個人GPS記録は自動公開されません。
+公開サイトは、明示的に承認・Publishされた公開JSON（現在は`schema_version=2`）を読み込みます。元GPX/TCXが自動公開されることはありません。
 
 ## Sheetsの統計プレビュー（ユーザー切り替え）
 
@@ -100,3 +100,7 @@ GASの公開処理は実行上限を超えないよう、`05_PublicPreview.gs` +
 Kudosの種目は**サイクリング・ウォーキング・ゴルフ**の3種類（表示順も同じ）です。アクティビティの名前を優先してキーワード判定し、判断できないものはGPSや従来の種類推定を利用します。以前の `Run` もウォーキングに統一します。
 
 既存の公開済みデータはブラウザ側で互換分類するため、GPS経路の再Publishは必要ありません。管理シートを統一する場合はGASの `applyActivityOverrides()` を1回実行してください。詳しくは [GAS手順](gas/README.md#9-アクティビティ種目の判定サイクリングウォーキングゴルフ) を参照してください。
+
+## GASソース同期（clasp）
+
+GitHubの`main`をGASソースの正本とし、[Issue #23の手順](docs/gas-clasp-sync.md)に従って`clasp`で**明示的に**既存Apps Scriptプロジェクトへ同期します。CIには手動起動専用の`Sync Kudos Apps Script source`を追加しています。通常のPR・`main`へのpushではGASに反映されません。認証情報・Script ID・Script PropertiesはGitへ保存しません。**定期GASトリガーは無効のまま**です。

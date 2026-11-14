@@ -1,0 +1,49 @@
+name: Sync Kudos Apps Script source
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PUSH to replace the Apps Script source from main'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kudos-gas-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'PUSH'
+    runs-on: ubuntu-latest
+    environment: gas-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate sources and run all tests
+        run: |
+          node scripts/verify-gas-sync.cjs
+          node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs
+          PATH_PREFIX=/kudos pnpm build
+      - name: Push reviewed source to Apps Script (never execute GAS functions)
+        env:
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          umask 077
+          cleanup() { rm -f .clasp.json "$HOME/.clasprc.json"; }
+          trap cleanup EXIT
+          node scripts/setup-gas-ci-auth.cjs
+          unset GAS_SCRIPT_ID CLASPRC_JSON
+          npx --yes @google/clasp@3.4.1 show-file-status --json > "$RUNNER_TEMP/clasp-file-status.json"
+          node scripts/verify-gas-sync.cjs "$RUNNER_TEMP/clasp-file-status.json"
+          npx --yes @google/clasp@3.4.1 push --force

@@ -9,3 +9,9 @@ dist/
 # Private Apps Script project identifiers and developer credentials
 .clasp.json
 gas/.clasp.json
+
+# clasp authentication and local GAS sync artifacts
+.clasprc.json
+**/.clasprc.json
+client_secret*.json
+clasp-status.tmp.json

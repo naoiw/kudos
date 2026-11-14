@@ -40,9 +40,7 @@ Private Google Sheets (owner only)
 
 <https://script.google.com/> で **スタンドアロンのApps Scriptプロジェクト** を新規作成します。Google Sheets側に紐づくスクリプトでも使える設計ですが、配布・更新を考慮してスタンドアロンを推奨します。
 
-`gas/*.gs` をそれぞれ同名でApps Scriptへコピーし、`gas/appsscript.json` のマニフェスト内容も登録してください。必要な権限はDrive読み取り、Sheets編集、トリガー作成のみです。
-
-CLIによる更新を使う場合は [clasp](https://github.com/google/clasp) を利用できます。リポジトリルートに自分専用の `.clasp.json` を置き、`scriptId` と `rootDir: "gas"` を設定して `clasp push` してください。Script IDや認証情報はコミットしないでください。
+初回のソース同期には [claspによる安全な同期手順](../docs/gas-clasp-sync.md) を利用してください。既存のApps Scriptにしか存在しないファイルがないか比較してから、`main`の`gas/*.gs`と`gas/appsscript.json`を反映します。ローカルの`.clasp.json`に既存のスクリプトIDと`rootDir: "gas"`を設定し、Script IDや認証情報はコミットしないでください。必要な権限はDrive読み取り、Sheets編集、トリガー作成など、マニフェストに記載されたものです。
 
 Apps Scriptの **プロジェクトの設定 → スクリプト プロパティ** に以下を登録します。
 
@@ -146,7 +144,7 @@ Do not commit Google Drive IDs, email addresses, or tokens. Exported preview.jso
 - **更新**：`gas/05_PublicPreview.gs`（元GPX/TCXからの経路抽出・display_name反映）
 - `gas/appsscript.json` は既に `script.external_request` を含んでおり、今回は変更不要です。
 
-GASエディターで `05_PublicPreview.gs` を最新版に置き換えてください。**シート列の変更はないため、`setupSheets()` の再実行は不要です。**
+現在は[claspの同期手順](../docs/gas-clasp-sync.md)でGASソース全体を反映します。**シート列の変更はないため、`setupSheets()` の再実行は不要です。**
 
 ### 7-2. 明示的に公開を承認する
 
@@ -181,8 +179,7 @@ Apps Scriptのプロジェクト設定にある **スクリプト プロパテ�
 
 **GASエディタで更新が必要なファイル：**
 
-- `gas/05_PublicPreview.gs` を最新版に置き換える
-- `gas/06_BatchedPublish.gs` を**新規追加**する（2026年11月時点で導入）
+- `gas/05_PublicPreview.gs` と `gas/06_BatchedPublish.gs` は現在いずれもGitHubの管理対象です。更新時は[claspの同期手順](../docs/gas-clasp-sync.md)で両方を含めて反映します
 - `appsscript.json` は変更不要。`script.external_request` は既に定義済み
 - `setupSheets()` も不要（シート列は変更しない）
 - `installSyncTriggers()` はまだ実行しない。**スケジュールは無効のまま**
@@ -240,3 +237,7 @@ Webアプリの種目は次の3種類に統一します。画面上の選択肢�
 Webアプリ側でも旧形式の公開JSONについてタイトルを用いた互換判定を行うため、**既に公開した経路データをすべて再Publishしなくても種目のフィルタ表示を更新できます**。今後 `publishApprovedPublicPreview()` を実行した際は、GAS側が判定した種目と手動指定を尊重するため `genre_version: 1` が公開JSONに付与されます。
 
 定期実行を有効化するものではありません。スケジュールは開発完了まで無効のままにしてください。
+
+## 10. ソースコードをclaspで同期する
+
+`main`のGASコードは[claspソース同期手順](../docs/gas-clasp-sync.md)に沿って更新します。ローカル/手動GitHub Actionsのどちらも、Apps Scriptの**ソースのみ**を更新します。`KUDOS_SPREADSHEET_ID`・`KUDOS_GITHUB_TOKEN`・Sheets・Drive・インストール型トリガーには触れません。実際のApps Scriptへ接続するためのGoogleアカウント認証とScript IDの設定は管理者が行ってください。**定期実行は有効にしないでください。**
