@@ -116,3 +116,7 @@ GitHubの`main`をGASソースの正本とし、[Issue #23の手順](docs/gas-cl
 GASの公開`run_id`は、Sheet内の非公開`activity_id`から決定する48bit数値IDです。名前・日時・並び順・ユーザーの公開順を変更しても維持されます。旧`schema_version=1/2`の数値IDもフロントエンドでそのまま読み込めます。詳細は[`docs/stable-activity-ids.md`](docs/stable-activity-ids.md)を参照してください。
 
 本番の公開データは、自動では書き換えません。GitHubへのマージ後に管理者が明示的にGASへclaspで反映し、その後必要に応じて手動で再Publishします。
+
+### 公開日時と統計の精度（Issue #17）
+
+公開データの`date_precision: month`は年月のみを示します。ヒートマップ・カレンダー・週別/日別の集計や連続記録は表示しません。`exact`モードでは正確な活動日時を表示できますが、公開対象者の同意と別途の明示的な承認が必要です。手順は[`docs/date-precision.md`](docs/date-precision.md)を参照してください。

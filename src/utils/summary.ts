@@ -8,6 +8,10 @@ export function summaryKey(date: string, period: SummaryPeriod): string {
   if (period === 'life') return 'Life';
   if (period === 'year') return date.slice(0, 4);
   if (period === 'month') return date.slice(0, 7);
+  if ((period === 'day' || period === 'week') &&
+      /^\d{4}-\d{2}$/.test(date)) {
+    throw new Error('Day/week statistics require exact public dates.');
+  }
   if (period === 'day') return date.slice(0, 10);
   const day = new Date(`${date.slice(0, 10)}T00:00:00Z`);
   day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
