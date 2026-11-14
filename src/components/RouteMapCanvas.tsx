@@ -40,6 +40,7 @@ export function RouteMapCanvas({
   const styleReadyRef = useRef(false);
   const cameraRef = useRef<mapboxgl.CameraOptions | null>(null);
   const fittedRef = useRef<unknown>(null);
+  const appliedStyleRef = useRef<string | mapboxgl.StyleSpecification | null>(null);
   const [provider, setProvider] = useState<'mapbox' | 'osm'>(MAPBOX_TOKEN ? 'mapbox' : 'osm');
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading'
@@ -66,12 +67,15 @@ export function RouteMapCanvas({
               id: 'basemap',
               type: 'raster',
               source: 'openstreetmap',
-              paint: dark === false
-                ? {}
-                : {
-                    'raster-brightness-max': 0.67,
-                    'raster-saturation': -0.6,
-                  },
+              paint: {
+                'raster-fade-duration': 0,
+                ...(dark === false
+                  ? {}
+                  : {
+                      'raster-brightness-max': 0.8,
+                      'raster-saturation': -0.4,
+                    }),
+              },
             },
           ],
         }, [provider, dark]);
@@ -138,9 +142,8 @@ export function RouteMapCanvas({
     map.fitBounds(routeBounds, {
       padding: { top: 35, bottom: 35, left: 35, right: 65 },
       maxZoom: selectedActivity ? 16 : 13,
-      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 0
-        : 500,
+      // Jump rather than animate: avoid cancelling the initial tile requests.
+      duration: 0,
     });
   }, [routeBounds, selectedActivity]);
 
@@ -185,7 +188,8 @@ export function RouteMapCanvas({
       container: containerRef.current,
       accessToken: MAPBOX_TOKEN,
       language: zh ? 'ja' : 'en',
-      style: { version: 8, sources: {}, layers: [] },
+      // Load the actual basemap immediately instead of an empty placeholder.
+      style,
       center: [139.7, 35.7],
       zoom: 10,
       ...cameraRef.current,
@@ -202,6 +206,19 @@ export function RouteMapCanvas({
         : {},
     });
     mapRef.current = map;
+    appliedStyleRef.current = style;
+    // Place the camera before the first map paint. The previous implementation
+    // animated to these bounds during style.load and could leave a blank map.
+    if (!routeBounds.isEmpty()) {
+      const camera = map.cameraForBounds(routeBounds, {
+        padding: { top: 35, bottom: 35, left: 35, right: 65 },
+        maxZoom: 12,
+      });
+      if (camera) {
+        map.jumpTo(camera);
+        fittedRef.current = routes;
+      }
+    }
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.addControl(
       new mapboxgl.FullscreenControl({ container: panelRef.current }),
@@ -244,12 +261,18 @@ export function RouteMapCanvas({
     map.on('error', onError);
     map.on('idle', onIdle);
     map.once('styledataloading', onLoading);
-    styleReadyRef.current = false;
-    map.setStyle(style, {
-      diff: false,
-      localFontFamily: undefined,
-      localIdeographFontFamily: 'sans-serif',
-    });
+    // The constructor already received the initial style. Do not replace it
+    // immediately: that discards in-flight raster tile requests on first load.
+    if (appliedStyleRef.current !== style) {
+      appliedStyleRef.current = style;
+      styleReadyRef.current = false;
+      setStatus('loading');
+      map.setStyle(style, {
+        diff: false,
+        localFontFamily: undefined,
+        localIdeographFontFamily: 'sans-serif',
+      });
+    }
     const timer = window.setTimeout(() => {
       if (!map.isStyleLoaded()) setStatus('error');
     }, 15000);
