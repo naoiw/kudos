@@ -76,7 +76,7 @@ function Dashboard() {
     [catalog, currentUser]
   );
   const { dark, toggle } = useTheme();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [filter, setFilter] = useState<SportFilter>('all');
   const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
   const [year, setYear] = useState<number | null>(null);
@@ -239,10 +239,10 @@ function Dashboard() {
       <div
         className="mx-auto max-w-[1400px] overflow-x-auto px-4 pt-3 sm:px-6"
         role="group"
-        aria-label="表示する年"
+        aria-label={locale === 'ja' ? '表示する年' : 'Activity year'}
       >
         <div className="flex min-w-max items-center gap-2 pb-1">
-          <span className="mr-1 text-sm text-[var(--color-muted)]">年</span>
+          <span className="mr-1 text-sm text-[var(--color-muted)]">{locale === 'ja' ? '年' : 'Year'}</span>
           {[null, ...years].map((value) => (
             <button
               key={value ?? 'all'}
@@ -257,7 +257,7 @@ function Dashboard() {
                 ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                 : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
             >
-              {value ?? 'すべての年'}
+              {value ?? (locale === 'ja' ? 'すべての年' : 'All years')}
             </button>
           ))}
         </div>
@@ -280,6 +280,7 @@ function Dashboard() {
       >
         {page === 'summary' ? (
           <SummaryPage
+            key={`${year ?? 'all'}-${filter}`}
             datePrecision={catalog.datePrecision}
             activities={baseFiltered}
             onSelectActivity={(activity) => {
@@ -289,6 +290,7 @@ function Dashboard() {
           />
         ) : page === 'tracks' ? (
           <TracksPage
+            key={`${year ?? 'all'}-${filter}`}
             year={year}
             activities={baseFiltered}
             dark={dark}
