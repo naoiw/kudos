@@ -88,34 +88,36 @@ interface DisplayRoute {
   type: string;
 }
 
-const decodedRouteCache = new WeakMap<Activity, DisplayRoute | null>();
+const decodedRouteCache = new WeakMap<Activity, DisplayRoute[]>();
 
-function decodeRoute(activity: Activity): DisplayRoute | null {
-  const existing = decodedRouteCache.get(activity);
-  if (existing !== undefined) return existing;
+function decodeRoute(activity: Activity): DisplayRoute[] {
+  const cached = decodedRouteCache.get(activity);
+  if (cached) return cached;
 
-  let route: DisplayRoute | null = null;
-  if (activity.summary_polyline) {
+  const encoded = activity.route_segments?.length
+    ? activity.route_segments
+    : activity.summary_polyline ? [activity.summary_polyline] : [];
+  const routes: DisplayRoute[] = [];
+  for (const segment of encoded) {
     try {
       const points = polyline
-        .decode(activity.summary_polyline)
-        .filter(
-          ([lat, lng]) =>
-            Number.isFinite(lat) &&
-            Number.isFinite(lng) &&
-            Math.abs(lat) <= 90 &&
-            Math.abs(lng) <= 180
+        .decode(segment)
+        .filter(([lat, lng]) =>
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180
         )
         .map(([lat, lng]) => [lat, lng] as LatLng);
       if (points.length >= 2) {
-        route = { points, type: activity.type };
+        routes.push({ points, type: activity.type });
       }
     } catch {
-      // Skip malformed routes; the activity statistics remain available.
+      // Ignore an invalid segment but keep drawing the other segments.
     }
   }
-  decodedRouteCache.set(activity, route);
-  return route;
+  decodedRouteCache.set(activity, routes);
+  return routes;
 }
 
 export function RouteMapCanvas({
@@ -156,9 +158,7 @@ export function RouteMapCanvas({
         : []
       : activities;
 
-    return list
-      .map(decodeRoute)
-      .filter((route): route is DisplayRoute => route !== null);
+    return list.flatMap(decodeRoute);
   }, [activities, selectedActivity, displayedActivity]);
 
   const fitRoutes = useCallback(() => {

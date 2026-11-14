@@ -1,10 +1,9 @@
 /**
- * Deliberate, opt-in publication of statistics-only preview data.
+ * Explicit export of user display names and GPX/TCX routes.
  *
- * The repository and GitHub Pages website are PUBLIC. This file never
- * publishes raw GPX, GPS points, user names, email, file IDs, private sheet
- * identifiers, source filenames, activity titles, or heart-rate values.
- * This action is NOT scheduled by the existing sync triggers.
+ * This remains a manual action. The repository is currently public: executing
+ * publishApprovedPublicPreview() makes these records publicly accessible.
+ * Do not add automatic publication until hosting and access control are ready.
  */
 const KUDOS_PUBLIC_PREVIEW_REPO = 'naoiw/kudos';
 const KUDOS_PUBLIC_PREVIEW_PATH = 'public/data/preview.json';
@@ -58,10 +57,10 @@ function kudosPreviewDuration_(seconds) {
 }
 
 /**
- * Pure projection of approved spreadsheet rows into a public, minimal schema.
- * No user ID or activity ID from the private workbook is emitted.
+ * Project selected spreadsheet rows into the dashboard activity schema.
+ * Public-facing IDs stay stable aliases to avoid exposing Sheets/Drive IDs.
  */
-function kudosBuildPublicPreview_(users, activities, allowlist, precision, now) {
+function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, routesByFile) {
   const active = new Map();
   for (const user of users) {
     const key = kudosText_(user.user_id);
@@ -74,9 +73,9 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now) 
     }
   }
 
-  const safeUsers = ids.map((_, i) => ({
+  const safeUsers = ids.map((id, i) => ({
     user_id: 'u' + String(i + 1).padStart(2, '0'),
-    display_name: 'ユーザー ' + (i + 1),
+    display_name: kudosText_(active.get(id).display_name) || 'ユーザー ' + (i + 1),
   }));
   const publicActivities = [];
 
@@ -105,18 +104,23 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now) 
         : local;
       const sport = kudosText_(row.sport_final);
       const gain = Number(row.elevation_gain_m);
+      const route = routesByFile && routesByFile.get(
+        kudosLogKey_(id, kudosText_(row.drive_file_id))
+      );
+      const routeSegments = route || [];
       publicActivities.push({
         run_id: (i + 1) * 1000000 + index + 1,
         user_id: safeUsers[i].user_id,
-        name: sport === 'Run' ? 'ランニング' : 'サイクリング',
+        name: kudosText_(row.name_override) || kudosText_(row.name) ||
+          (sport === 'Run' ? 'ランニング' : 'サイクリング'),
         type: sport,
         distance: distance,
         moving_time: kudosPreviewDuration_(seconds),
         start_date: date,
         start_date_local: date,
-        // The public repo must never contain GPS coordinates.
-        location_country: null,
-        summary_polyline: null,
+        location_country: kudosText_(row.prefecture_override) || null,
+        summary_polyline: routeSegments[0] || null,
+        route_segments: routeSegments,
         average_heartrate: null,
         average_speed: Number((distance / seconds).toFixed(3)),
         elevation_gain: Number.isFinite(gain)
@@ -136,6 +140,101 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now) 
   };
 }
 
+/**
+ * Google encoded polyline: precision 5, compatible with @mapbox/polyline.
+ * Only coordinate pairs are exported; timestamps and heart rate remain in GPX.
+ */
+function kudosEncodePolyline_(points) {
+  let previousLat = 0;
+  let previousLng = 0;
+  let output = '';
+  const encodeNumber = (number) => {
+    let value = number < 0 ? ~(number << 1) : number << 1;
+    let chars = '';
+    while (value >= 0x20) {
+      chars += String.fromCharCode((0x20 | (value & 0x1f)) + 63);
+      value >>>= 5;
+    }
+    return chars + String.fromCharCode(value + 63);
+  };
+  for (const point of points) {
+    const lat = Math.round(point.lat * 100000);
+    const lng = Math.round(point.lng * 100000);
+    output += encodeNumber(lat - previousLat) + encodeNumber(lng - previousLng);
+    previousLat = lat;
+    previousLng = lng;
+  }
+  return output;
+}
+
+/**
+ * Preserve each GPX/TCX track segment as a separate polyline so disconnected
+ * track recordings do not acquire artificial straight lines across gaps.
+ * Keep roughly 10-meter resolution; cap at 4,000 vertices per segment.
+ */
+function kudosEncodeRouteSegments_(segments) {
+  const result = [];
+  for (const segment of segments) {
+    if (segment.length < 2) continue;
+    const points = [segment[0]];
+    for (let i = 1; i < segment.length - 1; i++) {
+      if (kudosHaversine_(points[points.length - 1], segment[i]) >= 10) {
+        points.push(segment[i]);
+      }
+    }
+    const end = segment[segment.length - 1];
+    if (points[points.length - 1] !== end) points.push(end);
+    if (points.length < 2) continue;
+
+    let selected = points;
+    if (points.length > 4000) {
+      selected = Array.from({ length: 4000 }, (_, i) =>
+        points[Math.round(i * (points.length - 1) / 3999)]
+      );
+    }
+    result.push(kudosEncodePolyline_(selected));
+  }
+  return result;
+}
+
+/**
+ * GPX/TCX source files are kept in Drive; only the generated polylines are
+ * written to the JSON data file. No need to reimport activities into Sheets.
+ */
+function kudosReadPreviewRoutes_(activities, userIds) {
+  const selectedUsers = new Set(userIds);
+  const routes = new Map();
+  for (const row of activities) {
+    const userId = kudosText_(row.user_id);
+    if (!selectedUsers.has(userId) ||
+        kudosText_(row.review_status) !== 'ok' ||
+        !['Run', 'Ride'].includes(kudosText_(row.sport_final))) {
+      continue;
+    }
+    const fileId = kudosText_(row.drive_file_id);
+    if (!fileId) throw new Error('Missing Drive file ID for ' + row.activity_id);
+    const key = kudosLogKey_(userId, fileId);
+    if (routes.has(key)) continue;
+
+    try {
+      const file = DriveApp.getFileById(fileId);
+      const xml = file.getBlob().getDataAsString('UTF-8').replace(/^\\uFEFF/, '');
+      const root = XmlService.parse(xml).getRootElement();
+      const name = root.getName().toLowerCase();
+      const input = name === 'gpx' ? kudosParseGpx_(root)
+        : name === 'trainingcenterdatabase' ? kudosParseTcx_(root) : null;
+      if (!input) throw new Error('Unsupported GPX/TCX format');
+      const encoded = kudosEncodeRouteSegments_(input.segments);
+      if (!encoded.length) throw new Error('File has no drawable GPS track');
+      routes.set(key, encoded);
+    } catch (error) {
+      throw new Error('Failed to read GPS route for activity ' +
+        row.activity_id + ': ' + String(error));
+    }
+  }
+  return routes;
+}
+
 function kudosPreparePublicPreview_() {
   const ss = kudosOpenSpreadsheet_();
   kudosEnsureSheets_(ss);
@@ -144,8 +243,10 @@ function kudosPreparePublicPreview_() {
   const activities = kudosReadObjects_(
     ss.getSheetByName('Activities'), KUDOS_SHEETS.Activities
   );
+  const routeData = kudosReadPreviewRoutes_(activities, selection.userIds);
   return kudosBuildPublicPreview_(
-    users, activities, selection.userIds, selection.precision, kudosNowIso_()
+    users, activities, selection.userIds, selection.precision, kudosNowIso_(),
+    routeData
   );
 }
 
@@ -156,7 +257,8 @@ function inspectApprovedPublicPreview() {
     users: preview.users.length,
     activities: preview.activities.length,
     date_precision: preview.date_precision,
-    gps_routes_included: false,
+    gps_routes_included: preview.activities.filter((a) => a.route_segments.length > 0).length,
+    display_names_included: true,
     user_email_included: false,
     repository_public: true,
   };
@@ -165,7 +267,7 @@ function inspectApprovedPublicPreview() {
 }
 
 /**
- * Manually publish the reviewed statistics to public GitHub Pages.
+ * Manually publish the selected activities and routes to GitHub Pages.
  *
  * Requires a fine-grained GitHub token in Script Properties:
  * KUDOS_GITHUB_TOKEN, repository access only to naoiw/kudos, with
