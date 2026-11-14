@@ -60,6 +60,20 @@ function kudosPreviewDuration_(seconds) {
  * Project selected spreadsheet rows into the dashboard activity schema.
  * Public-facing IDs stay stable aliases to avoid exposing Sheets/Drive IDs.
  */
+/**
+ * Do not publish unresolved records unless a recognized name/explicit
+ * override resolves them. Legacy needs_review records are then recoverable.
+ */
+function kudosIsPublishableActivity_(row) {
+  const name = kudosText_(row.name_override) || kudosText_(row.name);
+  const resolved = kudosResolveSport_(
+    name, row.sport_detected || row.sport_final, row.sport_override
+  );
+  if (resolved.sport === 'Unknown') return false;
+  return kudosText_(row.review_status) === 'ok' ||
+    Boolean(kudosSportFromName_(name) || kudosNormalizeSport_(row.sport_override));
+}
+
 function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, routesByFile, sourceCollector) {
   const active = new Map();
   for (const user of users) {
@@ -83,10 +97,7 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
     const user = active.get(id);
     const rows = activities.filter((row) => {
       if (kudosText_(row.user_id) !== id) return false;
-      const name = kudosText_(row.name_override) || kudosText_(row.name);
-      return kudosResolveSport_(
-        name, row.sport_detected || row.sport_final, row.sport_override
-      ).sport !== 'Unknown';
+      return kudosIsPublishableActivity_(row);
     }).sort((a, b) => {
       return String(b.start_at_utc).localeCompare(String(a.start_at_utc));
     });
@@ -224,10 +235,7 @@ function kudosReadPreviewRoutes_(activities, userIds) {
     const userId = kudosText_(row.user_id);
     if (!selectedUsers.has(userId) ||
         kudosText_(row.review_status) !== 'ok' ||
-        kudosResolveSport_(
-          kudosText_(row.name_override) || kudosText_(row.name),
-          row.sport_detected || row.sport_final, row.sport_override
-        ).sport === 'Unknown') {
+        !kudosIsPublishableActivity_(row)) {
       continue;
     }
     const fileId = kudosText_(row.drive_file_id);
