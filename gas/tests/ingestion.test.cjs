@@ -15,7 +15,6 @@ const files = [
   'gas/03_Sync.gs',
   'gas/04_Triggers.gs',
   'gas/05_PublicPreview.gs',
-  'gas/05_PublicPreview.gs',
 ];
 
 class Element {
