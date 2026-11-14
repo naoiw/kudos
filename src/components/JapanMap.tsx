@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { Activity } from '../types';
-import { extractProvince } from '../hooks/useActivities';
+import { prefecturesForActivity } from '../core/prefectureRoutes';
 
 interface JapanMapProps {
   activities: Activity[];
@@ -153,8 +153,9 @@ export const JapanMap = memo(function JapanMap({
   const counts = useMemo(() => {
     const result = new Map<string, number>();
     for (const activity of activities) {
-      const pref = extractProvince(activity.location_country);
-      if (pref) result.set(pref, (result.get(pref) ?? 0) + 1);
+      for (const pref of prefecturesForActivity(activity)) {
+        result.set(pref, (result.get(pref) ?? 0) + 1);
+      }
     }
     return result;
   }, [activities]);

@@ -11,7 +11,6 @@ import {
 import type { Activity, SportFilter } from '@/types';
 import {
   useFilteredActivities,
-  extractProvince,
   getAvailableYears,
   getActivityCatalog,
 } from '@/hooks/useActivities';
@@ -25,6 +24,7 @@ import { RouteMap } from '@/components/RouteMap';
 import { CalendarWidget } from '@/components/CalendarWidget';
 import { ProfileCard } from '@/components/ProfileCard';
 import { JapanMap } from '@/components/JapanMap';
+import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { PersonalBest } from '@/components/PersonalBest';
 
 const TracksPage = lazy(() =>
@@ -107,7 +107,7 @@ function Dashboard() {
   const filtered = useMemo(
     () => selectedPrefecture
       ? baseFiltered.filter((activity) =>
-          extractProvince(activity.location_country) === selectedPrefecture
+          prefecturesForActivity(activity).includes(selectedPrefecture)
         )
       : baseFiltered,
     [baseFiltered, selectedPrefecture]
@@ -185,7 +185,7 @@ function Dashboard() {
 
       <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
         {catalog.mode === 'public-preview'
-          ? '統計プレビュー：GPS経路・氏名・メールアドレス・正確な所在地は公開していません。'
+          ? 'GPX経路・活動情報は公開サイト上で閲覧可能です。非公開運用には別途アクセス制限が必要です。'
           : 'デモ表示：掲載中のアクティビティとGPS経路は架空のサンプルデータです。'}
       </div>
       <Suspense
@@ -263,6 +263,7 @@ function Dashboard() {
                 />
                 <div ref={routeSectionRef} className="scroll-mt-28">
                   <RouteMap
+                    focusedPrefecture={selectedPrefecture}
                     activities={filtered}
                     allActivities={activities}
                     selectedActivity={selectedActivity}
