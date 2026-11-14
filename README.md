@@ -49,3 +49,15 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 - OpenStreetMap: © OpenStreetMap contributors。地図中に出典を表示します。タイルの利用には [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) が適用されます。
 - LeafletのJavaScript・CSSはバージョン固定のCDNから取得します。アプリのソース・ビルドに追加のnpm依存を持たせません。
 
+
+## 日本地図（足跡マップ）
+
+元の [running_page](https://github.com/yihong0618/running_page) の「足迹地图」と同様に、React + SVG で都道府県ごとの訪問状況を描画します。クリックすると対象都道府県のアクティビティに絞り込みます。
+
+- 地図データ：[hfu/gmjpn21pref](https://github.com/hfu/gmjpn21pref) の日本47都道府県 GeoJSON（Unlicense / Public Domain）
+- 原典：国土地理院「地球地図日本」（[国土地理院ウェブサイト](https://www.gsi.go.jp/kankyochiri/gm_jpn.html)）
+- ランニングとサイクリングでフィルター可能
+- 現在の件数判定：活動データの `location_country` に記載された都道府県名
+- 将来対応予定：GPXの経路が通過した複数都道府県の自動集計
+
+ルートマップの背景タイルはライト・ダークの両モードでグレースケール化します。経路色は種目に応じて残します。
