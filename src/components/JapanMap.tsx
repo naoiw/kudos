@@ -339,7 +339,7 @@ export const JapanMap = memo(function JapanMap({
             return (
               <path key={code} d={d} fill={fill} fillRule="evenodd"
                 stroke="var(--color-bg)" strokeWidth="0.65" vectorEffect="non-scaling-stroke"
-                className="cursor-pointer transition-colors duration-150"
+                className="footprint-prefecture cursor-pointer transition-colors duration-150"
                 onMouseEnter={() => setHover(name)}
                 onMouseLeave={() => setHover(null)}
                 onFocus={() => setHover(name)}
