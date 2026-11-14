@@ -110,3 +110,9 @@ GitHubの`main`をGASソースの正本とし、[Issue #23の手順](docs/gas-cl
 種目の別名、タイトルキーワード、優先順位は[`shared/sport-rules.json`](shared/sport-rules.json)が正本です。TypeScriptはJSONを直接読み込み、GASは`gas/00_Config.gs`に埋め込んだ自動生成済み定義を使います。
 
 ルールを編集した場合は`node scripts/generate-sport-rules.cjs`を実行し、生成されたGASの変更もコミットしてください。CIと`node scripts/verify-gas-sync.cjs`は生成済み定義の整合性を検査します。GASとTypeScriptの一致は`shared/sport-contract-cases.json`を使用した契約テストで確認します。詳しくは[`docs/sport-rules.md`](docs/sport-rules.md)を参照してください。
+
+## 公開アクティビティID（Issue #16）
+
+GASの公開`run_id`は、Sheet内の非公開`activity_id`から決定する48bit数値IDです。名前・日時・並び順・ユーザーの公開順を変更しても維持されます。旧`schema_version=1/2`の数値IDもフロントエンドでそのまま読み込めます。詳細は[`docs/stable-activity-ids.md`](docs/stable-activity-ids.md)を参照してください。
+
+本番の公開データは、自動では書き換えません。GitHubへのマージ後に管理者が明示的にGASへclaspで反映し、その後必要に応じて手動で再Publishします。

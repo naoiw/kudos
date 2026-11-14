@@ -808,10 +808,10 @@ test('existing imported rows can be reclassified without reopening GPX files', (
 test('export detects golf in legacy Ride records without forcing a new GPX import', () => {
   const { evaluate } = createFixture();
   const rows = [
-    { user_id: 'user_02', name: 'ゴルフ', sport_final: 'Ride', sport_detected: 'Ride',
+    { user_id: 'user_02', activity_id: 'act_legacy_golf', name: 'ゴルフ', sport_final: 'Ride', sport_detected: 'Ride',
       review_status: 'ok', start_at_utc: '2026-11-13T00:00:00Z',
       distance_m: 8500, moving_time_s: 11000, elevation_gain_m: 5 },
-    { user_id: 'user_02', name: 'ウォーキング', sport_final: 'Run',
+    { user_id: 'user_02', activity_id: 'act_legacy_walk', name: 'ウォーキング', sport_final: 'Run',
       sport_detected: 'Run', review_status: 'ok', start_at_utc: '2026-11-12T00:00:00Z',
       distance_m: 7000, moving_time_s: 5400, elevation_gain_m: 5 },
     { user_id: 'user_02', name: 'Unknown', sport_final: 'Unknown',
@@ -826,4 +826,131 @@ test('export detects golf in legacy Ride records without forcing a new GPX impor
   assert.equal(result.genre_version, 1);
   assert.deepEqual(Array.from(result.activities, (a) => a.type), ['Golf', 'Walk']);
   assert.equal(result.activities.length, 2);
+});
+
+
+test('public run_id is immutable when new activities are inserted, reordered, or renamed', () => {
+  const { evaluate } = createFixture();
+  const users = [{
+    user_id: 'private_cyclist', display_name: 'Rider',
+    enabled: true, timezone: 'Asia/Tokyo',
+  }];
+  const base = [
+    { user_id: 'private_cyclist', activity_id: 'act_immutable_a',
+      name: 'サイクリング 旧タイトル', sport_final: 'Ride', review_status: 'ok',
+      distance_m: 50000, moving_time_s: 3600, elevation_gain_m: 100,
+      start_at_utc: '2026-11-14T01:00:00Z' },
+    { user_id: 'private_cyclist', activity_id: 'act_immutable_b',
+      name: 'ウォーキング', sport_final: 'Walk', review_status: 'ok',
+      distance_m: 10000, moving_time_s: 5400, elevation_gain_m: 10,
+      start_at_utc: '2026-11-13T01:00:00Z' },
+  ];
+  const project = (rows) => evaluate(
+    'kudosBuildPublicPreview_(_people, _records, ["private_cyclist"], "month", "now")',
+    { _people: users, _records: rows }
+  );
+  const initial = project(base);
+  const inserted = { ...base[0], activity_id: 'act_new',
+    start_at_utc: '2026-11-15T01:00:00Z' };
+  const changed = project([base[1], inserted, {
+    ...base[0], name: '改名',
+    name_override: 'ゴルフ',
+    sport_override: 'Ride',
+    start_at_utc: '2026-11-10T01:00:00Z',
+  }]);
+  const originalIds = initial.activities.map((a) => a.run_id);
+  const afterIds = changed.activities.map((a) => a.run_id);
+  assert.equal(initial.id_version, 1);
+  assert.equal(changed.id_version, 1);
+  assert.equal(afterIds.length, 3);
+  assert.ok(afterIds.includes(originalIds[0]));
+  assert.ok(afterIds.includes(originalIds[1]));
+  assert.equal(new Set(afterIds).size, 3);
+  assert.ok(afterIds.every(Number.isSafeInteger));
+  const expectedSheetId = evaluate('kudosStablePublicRunId_("act_immutable_a")');
+  assert.equal(originalIds[0], expectedSheetId);
+  assert.equal(changed.activities.find((a) => a.run_id === expectedSheetId).type, 'Ride',
+    'manual override must survive title changes');
+  assert.equal(JSON.stringify(changed).includes('act_immutable_'), false);
+});
+
+test('same-time records across users get distinct IDs independent of approved user order', () => {
+  const { evaluate } = createFixture();
+  const users = [
+    { user_id: 'private_a', enabled: true, timezone: 'Asia/Tokyo' },
+    { user_id: 'private_b', enabled: true, timezone: 'Asia/Tokyo' },
+  ];
+  const records = ['private_a', 'private_b'].map((id) => ({
+    user_id: id, activity_id: 'act_unique_for_' + id,
+    name: 'Ride', sport_final: 'Ride', review_status: 'ok',
+    distance_m: 5000, moving_time_s: 600,
+    start_at_utc: '2026-11-14T01:00:00Z',
+  }));
+  const project = (list, ids) => evaluate(
+    'kudosBuildPublicPreview_(_people, _records, _ids, "exact", "now")',
+    { _people: users, _records: list, _ids: ids }
+  );
+  const two = project(records, ['private_a', 'private_b']);
+  assert.equal(two.activities.length, 2);
+  assert.notEqual(two.activities[0].run_id, two.activities[1].run_id);
+  assert.deepEqual(
+    Array.from(two.activities, (a) => a.run_id).sort((a, b) => a - b),
+    Array.from(project([...records].reverse(), ['private_b', 'private_a']).activities,
+      (a) => a.run_id).sort((a, b) => a - b)
+  );
+  const onlyB = project(records, ['private_b']);
+  assert.equal(onlyB.activities[0].run_id, two.activities[1].run_id);
+});
+
+test('missing private IDs and duplicate/colliding public IDs abort the export', () => {
+  const { evaluate } = createFixture();
+  const users = [{ user_id: 'a', enabled: true, timezone: 'Asia/Tokyo' }];
+  const activity = {
+    user_id: 'a', activity_id: 'act_same',
+    name: 'Ride', sport_final: 'Ride', review_status: 'ok',
+    distance_m: 5000, moving_time_s: 600,
+    start_at_utc: '2026-11-14T01:00:00Z',
+  };
+  const preview = (rows) => evaluate(
+    'kudosBuildPublicPreview_(_people, _records, ["a"], "month", "now")',
+    { _people: users, _records: rows }
+  );
+  assert.throws(() => preview([{ ...activity, activity_id: '' }]), /Missing private activity_id/);
+  assert.throws(() => preview([activity, { ...activity, name: 'RIDE duplicate' }]),
+    /Duplicate stable public run_id/);
+  // Simulate a truncated-hash collision between distinct private IDs.
+  evaluate('kudosSha256_ = function () { return "a".repeat(64); }');
+  assert.throws(() => preview([activity, { ...activity, activity_id: 'act_other' }]),
+    /Duplicate stable public run_id/);
+});
+
+test('legacy numeric route IDs remain compatible with stable v2 chunk join', () => {
+  const { evaluate } = createFixture();
+  const users = [{ user_id: 'a', enabled: true, timezone: 'Asia/Tokyo' }];
+  const activities = [
+    { user_id: 'a', activity_id: 'act_first', name: 'Ride',
+      sport_final: 'Ride', review_status: 'ok', distance_m: 5000,
+      moving_time_s: 600, start_at_utc: '2026-11-14T01:00:00Z' },
+    { user_id: 'a', activity_id: 'act_second', name: 'Ride',
+      sport_final: 'Ride', review_status: 'ok', distance_m: 5000,
+      moving_time_s: 600, start_at_utc: '2026-11-13T01:00:00Z' },
+  ];
+  const preview = evaluate(
+    'kudosBuildPublicPreview_(_people, _records, ["a"], "month", "now")',
+    { _people: users, _records: activities }
+  );
+  // The frontend and existing legacy JSON v1/v2 use the same number key.
+  const legacy = { schema_version: 2, activities: [
+    { run_id: 1000001 }, { run_id: 1000002 },
+  ] };
+  const legacyChunks = [{ run_id: 1000001 }, { run_id: 1000002 }];
+  for (const record of legacy.activities) {
+    assert.ok(legacyChunks.some((chunk) => chunk.run_id === record.run_id));
+  }
+  const stableChunks = preview.activities.map((activity) => ({
+    run_id: activity.run_id, route_segments: ['encoded-route'],
+  }));
+  const byId = new Map(stableChunks.map((row) => [row.run_id, row.route_segments]));
+  assert.equal(byId.size, preview.activities.length);
+  assert.ok(preview.activities.every((activity) => byId.has(activity.run_id)));
 });

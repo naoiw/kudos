@@ -1,6 +1,6 @@
 export interface Activity {
   user_id?: string;
-  run_id: number;
+  run_id: number; // Legacy sequential or stable 48-bit public ID (safe integer).
   name: string;
   distance: number; // meters
   moving_time: string; // "H:MM:SS"
