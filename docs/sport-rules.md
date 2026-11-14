@@ -22,9 +22,10 @@
 
 1. `shared/sport-rules.json`のキーワードまたは別名を変更する（小文字、重複なし）。
 2. `shared/sport-contract-cases.json`に期待する判定を追加する。
-3. `node scripts/generate-sport-rules.cjs`を実行してGAS定義を再生成。
-4. `node scripts/generate-sport-rules.cjs --check`と`node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs`を実行。
-5. PRのCIに合格したらmainにマージし、Apps Scriptへ反映が必要な場合のみ、[clasp手順](gas-clasp-sync.md)に従って管理者が手動でpushする。
+3. 初回は`pnpm install --frozen-lockfile`を実行してTypeScriptなどの依存パッケージを導入する（Windowsでpnpmがない場合は`npx --yes pnpm@8.9.0 install --frozen-lockfile`）。
+4. `node scripts/generate-sport-rules.cjs`を実行してGAS定義を再生成。
+5. `node scripts/generate-sport-rules.cjs --check`と`node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs`を実行。
+6. PRのCIに合格したらmainにマージし、Apps Scriptへ反映が必要な場合のみ、[clasp手順](gas-clasp-sync.md)に従って管理者が手動でpushする。
 
 *ルールの変更は既存シートの行を自動で書き換えません。* 既存の`Activities`を再分類する場合は`applyActivityOverrides()`を管理者が明示的に実行してください。手動`sport_override`は保持されます。
 
