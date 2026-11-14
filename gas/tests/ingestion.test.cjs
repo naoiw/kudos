@@ -547,3 +547,55 @@ test('separate GPX track segments are encoded separately instead of joined', () 
   assert.equal(result.length, 2);
   assert.ok(result[0] !== result[1]);
 });
+
+test('fast GPX parser reads track segments without XmlService object creation', () => {
+  const { evaluate } = createFixture();
+  const xml = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">',
+    '<trk><name>Cycling GPX</name><type>cycling</type><trkseg>',
+    '<trkpt lat="35.00000" lon="139.00000"><ele>30</ele><time>2026-11-14T00:00:00Z</time></trkpt>',
+    '<trkpt lat="35.00100" lon="139.00000"><ele>35</ele><time>2026-11-14T00:01:00Z</time><extensions><gpxtpx:TrackPointExtension xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><gpxtpx:hr>142</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></trkpt>',
+    '<trkpt lat="35.00200" lon="139.00000"><ele>40</ele><time>2026-11-14T00:02:00Z</time></trkpt>',
+    '</trkseg></trk></gpx>',
+  ].join('');
+  const result = evaluate('kudosParseActivity_(_xml, _settings)', {
+    _xml: xml,
+    _settings: { maxSpeed: 45, maxMovingGap: 180, minMovingSpeed: 0.5 },
+  });
+  assert.equal(result.format, 'GPX');
+  assert.equal(result.name, 'Cycling GPX');
+  assert.equal(result.sportDetected, 'Ride');
+  assert.equal(result.movingSeconds, 120);
+  assert.equal(result.elevationGainMeters, 10);
+  assert.equal(result.averageHeartRate, 142);
+  assert.ok(result.distanceMeters > 200);
+});
+
+test('GPX fast path preserves separate tracks and supports single quotes', () => {
+  const { evaluate } = createFixture();
+  const xml = '<gpx><trk><name>Two legs</name>' +
+    '<trkseg><trkpt lat=\\'35.0\\' lon=\\'139.0\\'/><trkpt lat=\\'35.001\\' lon=\\'139.001\\'/></trkseg>' +
+    '<trkseg><trkpt lat="36.0" lon="140.0"/><trkpt lat="36.001" lon="140.001"/></trkseg>' +
+    '</trk></gpx>';
+  const input = evaluate('kudosParseGpxFast_(_xml)', { _xml: xml });
+  assert.equal(input.segments.length, 2);
+  assert.equal(input.segments[0].length, 2);
+  assert.equal(input.segments[1].length, 2);
+});
+
+test('manual import progress reports completed rows and never creates triggers', () => {
+  const { evaluate, ss, folders } = createFixture();
+  evaluate('setupSheets()');
+  const users = ss.getSheetByName('Users');
+  users.getRange(2, 1, 1, 6).setValues([
+    ['alice', 'Alice', '', 'folderA', 'Asia/Tokyo', true],
+  ]);
+  folders.set('folderA', [fakeFile('a1', 'run-gpx')]);
+  const run = evaluate('importNextManualBatch()');
+  assert.equal(run.files_imported, 1);
+  const summary = evaluate('showImportProgress()');
+  assert.equal(summary.alice.imported, 1);
+  const repeated = evaluate('importNextManualBatch()');
+  assert.equal(repeated.files_imported, 0);
+});
