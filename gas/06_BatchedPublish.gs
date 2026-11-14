@@ -105,30 +105,6 @@ function kudosPublishedRoute_(source) {
   };
 }
 
-function kudosStagePublishChunk_(sources, start, end) {
-  const routes = [];
-  for (let i = start; i < end; i++) {
-    try {
-      routes.push(kudosPublishedRoute_(sources[i]));
-    } catch (error) {
-      throw new Error('Unable to export run_id ' + sources[i].run_id +
-        ' (batch stays at its previous checkpoint): ' + String(error));
-    }
-  }
-  const content = JSON.stringify({
-    schema_version: 1,
-    routes: routes,
-  });
-  const blob = kudosGithubApi_('post', '/git/blobs', {
-    content,
-    encoding: 'utf-8',
-  });
-  if (!blob.sha || !/^[0-9a-f]{40}$/.test(blob.sha)) {
-    throw new Error('GitHub route blob response did not include a valid SHA.');
-  }
-  return blob.sha;
-}
-
 function kudosRouteChunkPath_(state, index) {
   return 'public/data/exports/' + state.jobId +
     '/chunk-' + String(index).padStart(4, '0') + '.json';

@@ -175,17 +175,37 @@ GitHubの **Settings → Developer settings → Personal access tokens → Fine-
 
 Apps Scriptのプロジェクト設定にある **スクリプト プロパティ**へ `KUDOS_GITHUB_TOKEN` として保存します。**Google SheetsやGitHubのファイルには書かないでください。**
 
-### 7-4. 実行手順
+### 7-4. 大量GPXの分割公開（2026年11月更新）
 
-1. `Settings` で対象ユーザーを設定する（従来の `public_preview_export_approval` などを利用します）。
-2. Apps Scriptの関数一覧から **`inspectApprovedPublicPreview()`** を実行し、件数や日付公開方法を確認する。
-3. 内容に問題がなければ **`publishApprovedPublicPreview()`** を手動実行する。
-4. <https://github.com/naoiw/kudos/blob/main/public/data/preview.json> で公開データの内容を確認する。
-5. GitHub ActionsのPagesデプロイ完了後、<https://naoiw.github.io/kudos/> でユーザー切り替えと集計を確認する。
+管理シートの活動件数が多い場合でもGASの実行時間制限（1回6分）を超えないよう、**公開処理も分割・途中再開式**になっています。
 
-公開用JSONが未作成・未公開のときは、サイトはこれまでの架空サンプル表示へ戻ります。経路が含まれるアクティビティは**ルートマップに表示されます**。足跡マップの都道府県集計は引き続き `prefecture_override` の値に依存します。
+**GASエディタで更新が必要なファイル：**
 
-既存の同期トリガーは**エクスポートを呼び出しません**。新しいGPXを取り込んで表示を更新したいときは、`publishApprovedPublicPreview()` をもう一度実行してください。
+- `gas/05_PublicPreview.gs` を最新版に置き換える
+- `gas/06_BatchedPublish.gs` を**新規追加**する（2026年11月時点で導入）
+- `appsscript.json` は変更不要。`script.external_request` は既に定義済み
+- `setupSheets()` も不要（シート列は変更しない）
+- `installSyncTriggers()` はまだ実行しない。**スケジュールは無効のまま**
+
+**実行手順：**
+
+1. `Settings.public_preview_export_approval` と `public_preview_user_ids` を確認する
+2. `inspectApprovedPublicPreview()` または `showPublicPreviewProgress()` を実行する。**元GPXは読み込まず、公開対象の件数だけ確認する**
+3. `publishApprovedPublicPreview()` を実行する。**1回では全件公開しない**。1回あたり最大8件（または180秒の処理予算）を変換し、GitHubへ作業用のBlobとして保存する
+4. `showPublicPreviewProgress()` で `processed` / `total` / `chunks` / `needs_reset` を確認する
+5. **`published: true` と表示されるまで `publishApprovedPublicPreview()` を手動で繰り返す**。進捗はGASのスクリプトプロパティに保持され、次回は続きから処理される
+6. 完了した時点で `public/data/preview.json` と `public/data/exports/<ジョブID>/chunk-XXXX.json` が**1回のGitコミットで** `main` に反映され、Pagesのデプロイが開始される
+7. <https://naoiw.github.io/kudos/> で反映を確認する
+
+公開用データは新しい **schema_version=2** です。`preview.json` にユーザー情報と統計、および `route_chunks`（経路JSONのパス一覧）を収めます。ルートマップ・足跡マップはブラウザ側で経路チャンクを読み込みます。従来のschema_version=1も読み込めます。
+
+- **途中のバッチはmainへ反映しません**。作業用Git Blobがそろうまで現在の公開サイトはそのままです。最終コミットは1回だけ行います
+- 大きなGPXを処理中に例外が発生した場合、完了済みチャンクの進捗を保持して停止します。同じ関数を再実行してください
+- `Users` / `Activities` / `Settings` をバッチ途中で変更した場合は、意図しないデータ混在を防ぐためエラーになります。`resetPublicPreviewBatch()` で途中の状態を破棄し、先頭から公開し直してください。**現在の公開サイトは変更されません**
+- 本方式は **公開済みの全アクティビティのGPXをバッチごとに読み出します**。初回に全件分のGPS経路をSheetsへ保存する必要はありません
+- 現状は最大8件/回・処理予算180秒をコードで定義しています。GASの6分制限に余裕を持たせていますが、**1つのGPXの解析だけで6分を超える場合は別途さらに対策が必要**です
+- 多数のファイルを扱うとGitHubへの公開データが数MBになることがあります。データ送信の対象と公開範囲を確認してください
+- **GitHubはPublicリポジトリ**です。JSONに含めたGPS座標は公開されます。将来Vercel/Cloudflareに移行しても、公開アクセスを止めるにはホスティング側でも認証が必要です
 
 ### 7-5. 公開を止める
 
