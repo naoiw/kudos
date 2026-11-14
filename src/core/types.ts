@@ -1,4 +1,5 @@
 export interface Activity {
+  user_id?: string;
   run_id: number;
   name: string;
   distance: number; // meters

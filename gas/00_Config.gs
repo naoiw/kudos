@@ -34,6 +34,10 @@ const KUDOS_DEFAULT_SETTINGS = Object.freeze([
   ['max_plausible_speed_mps', '45', 'Reject implausible GPS segment jumps'],
   ['max_moving_gap_s', '180', 'Do not count gaps longer than this as moving'],
   ['default_route_visibility', 'stats', 'Private by default: do not publish any route'],
+  ['public_preview_export_approval', 'disabled', 'Set I_APPROVE_PUBLIC_STATS only after reviewing public visibility'],
+  ['public_preview_user_ids', '', 'Comma-separated private user IDs approved for public statistics'],
+  ['public_preview_date_precision', 'month', 'month anonymizes exact activity dates; exact needs additional approval'],
+  ['public_preview_exact_dates_approval', 'disabled', 'Set I_APPROVE_EXACT_DATES only for non-sensitive demo activities'],
 ]);
 
 const KUDOS_SPREADSHEET_PROPERTY = 'KUDOS_SPREADSHEET_ID';
