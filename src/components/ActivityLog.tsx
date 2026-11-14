@@ -8,9 +8,6 @@ import { formatActivityDate, type DatePrecision } from '../core/datePrecision';
 interface ActivityLogProps {
   datePrecision?: DatePrecision | null;
   activities: Activity[];
-  years: number[];
-  year: number | null;
-  setYear: (y: number | null) => void;
   selectedActivity?: Activity | null;
   onSelectActivity?: (a: Activity | null) => void;
   filter?: SportFilter;
@@ -24,9 +21,6 @@ type DistanceFilter = 'all' | '10' | '20' | '40';
 export function ActivityLog({
   datePrecision,
   activities,
-  years,
-  year,
-  setYear,
   selectedActivity,
   onSelectActivity,
 }: ActivityLogProps) {
@@ -88,39 +82,6 @@ export function ActivityLog({
           {Math.min((page + 1) * PAGE_SIZE, sorted.length)} {t('of')}{' '}
           {sorted.length}
         </span>
-      </div>
-
-      {/* Year tabs */}
-      <div
-        role="group"
-        aria-label={locale === 'ja' ? 'アクティビティの年' : 'Activity year'}
-        className="mb-3 flex flex-wrap items-center gap-2"
-      >
-        <button
-          aria-pressed={year === null}
-          onClick={() => {
-            onSelectActivity?.(null);
-            setYear(null);
-            setPage(0);
-          }}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${year === null ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-        >
-          {t('all')}
-        </button>
-        {years.map((y) => (
-          <button
-            key={y}
-            aria-pressed={year === y}
-            onClick={() => {
-              onSelectActivity?.(null);
-              setYear(y);
-              setPage(0);
-            }}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${year === y ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'bg-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-          >
-            {y}
-          </button>
-        ))}
       </div>
 
       {/* Distance filter */}

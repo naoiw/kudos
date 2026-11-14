@@ -136,6 +136,7 @@ function Dashboard() {
 
   const [currentYear] = useState(() => new Date().getFullYear());
   const years = useMemo(() => getAvailableYears(activities), [activities]);
+  const yearFiltered = useFilteredActivities(activities, 'all', year);
   const baseFiltered = useFilteredActivities(activities, filter, year);
   const filtered = useMemo(
     () => selectedPrefecture
@@ -145,7 +146,6 @@ function Dashboard() {
       : baseFiltered,
     [baseFiltered, selectedPrefecture]
   );
-  const heatmapYear = year ?? years[0] ?? currentYear;
 
   const selectActivity = useCallback(
     (activity: Activity | null) => {
@@ -235,6 +235,34 @@ function Dashboard() {
         </div>
       )}
 
+      {/* One year selection controls every activity widget and page. */}
+      <div
+        className="mx-auto max-w-[1400px] overflow-x-auto px-4 pt-3 sm:px-6"
+        role="group"
+        aria-label="表示する年"
+      >
+        <div className="flex min-w-max items-center gap-2 pb-1">
+          <span className="mr-1 text-sm text-[var(--color-muted)]">年</span>
+          {[null, ...years].map((value) => (
+            <button
+              key={value ?? 'all'}
+              type="button"
+              aria-pressed={year === value}
+              onClick={() => {
+                setYear(value);
+                setSelectedActivity(null);
+                setSelectedPrefecture(null);
+              }}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${year === value
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
+                : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+            >
+              {value ?? 'すべての年'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
         {catalog.mode === 'public-preview'
           ? 'GPX経路・活動情報は公開サイト上で閲覧可能です。非公開運用には別途アクセス制限が必要です。'
@@ -253,16 +281,16 @@ function Dashboard() {
         {page === 'summary' ? (
           <SummaryPage
             datePrecision={catalog.datePrecision}
-            activities={activities}
+            activities={baseFiltered}
             onSelectActivity={(activity) => {
               navigate('home');
-              setYear(null);
               selectActivity(activity);
             }}
           />
         ) : page === 'tracks' ? (
           <TracksPage
-            activities={activities}
+            year={year}
+            activities={baseFiltered}
             dark={dark}
             filter={filter}
             onSelectActivity={selectActivity}
@@ -287,8 +315,9 @@ function Dashboard() {
                 />
                 {catalog.datePrecision !== 'month' && (
                   <ContributionHeatmap
-                    activities={activities}
-                    year={heatmapYear}
+                    key={`${year ?? 'all'}-${filter}`}
+                    activities={baseFiltered}
+                    year={year}
                     filter={filter}
                     onSelectActivity={selectActivity}
                   />
@@ -296,12 +325,6 @@ function Dashboard() {
                 <ActivityLog
                   datePrecision={catalog.datePrecision}
                   activities={filtered}
-                  years={years}
-                  year={year}
-                  setYear={(value) => {
-                    setYear(value);
-                    setSelectedActivity(null);
-                              }}
                   selectedActivity={selectedActivity}
                   onSelectActivity={selectActivity}
                   filter={filter}
@@ -310,7 +333,7 @@ function Dashboard() {
 
               {/* Right column */}
               <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
-                <ProfileCard activities={activities} filter={filter} />
+                <ProfileCard activities={yearFiltered} filter={filter} />
                 <JapanMap
                   activities={baseFiltered}
                   selectedPrefecture={selectedPrefecture}
@@ -323,7 +346,7 @@ function Dashboard() {
                   <RouteMap
                     focusedPrefecture={selectedPrefecture}
                     activities={filtered}
-                    allActivities={activities}
+                    allActivities={baseFiltered}
                     selectedActivity={selectedActivity}
                     dark={dark}
                     onClearSelection={() => setSelectedActivity(null)}
