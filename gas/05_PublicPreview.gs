@@ -60,7 +60,7 @@ function kudosPreviewDuration_(seconds) {
  * Project selected spreadsheet rows into the dashboard activity schema.
  * Public-facing IDs stay stable aliases to avoid exposing Sheets/Drive IDs.
  */
-function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, routesByFile) {
+function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, routesByFile, sourceCollector) {
   const active = new Map();
   for (const user of users) {
     const key = kudosText_(user.user_id);
@@ -108,8 +108,9 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
         kudosLogKey_(id, kudosText_(row.drive_file_id))
       );
       const routeSegments = route || [];
+      const runId = (i + 1) * 1000000 + index + 1;
       publicActivities.push({
-        run_id: (i + 1) * 1000000 + index + 1,
+        run_id: runId,
         user_id: safeUsers[i].user_id,
         name: kudosText_(row.name_override) || kudosText_(row.name) ||
           (sport === 'Run' ? 'ランニング' : 'サイクリング'),
@@ -128,6 +129,15 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
         source: 'public-preview',
         streak: 0,
       });
+      // Private source mapping is held only in the current GAS execution.
+      // It is never written into preview.json or any GitHub blob.
+      if (sourceCollector) {
+        sourceCollector.push({
+          run_id: runId,
+          user_id: id,
+          file_id: kudosText_(row.drive_file_id),
+        });
+      }
     });
   });
   return {
@@ -240,10 +250,11 @@ function kudosPreparePublicPreview_() {
   const activities = kudosReadObjects_(
     ss.getSheetByName('Activities'), KUDOS_SHEETS.Activities
   );
-  const routeData = kudosReadPreviewRoutes_(activities, selection.userIds);
+  // Intentionally metadata-only. Reading every GPX here exceeded the
+  // six-minute GAS runtime limit once the workbook had ~185 activities.
   return kudosBuildPublicPreview_(
-    users, activities, selection.userIds, selection.precision, kudosNowIso_(),
-    routeData
+    users, activities, selection.userIds, selection.precision,
+    kudosNowIso_(), null
   );
 }
 
@@ -254,7 +265,7 @@ function inspectApprovedPublicPreview() {
     users: preview.users.length,
     activities: preview.activities.length,
     date_precision: preview.date_precision,
-    gps_routes_included: preview.activities.filter((a) => a.route_segments.length > 0).length,
+    gps_routes_included: 'loaded incrementally during publishing',
     display_names_included: true,
     user_email_included: false,
     repository_public: true,
@@ -264,64 +275,11 @@ function inspectApprovedPublicPreview() {
 }
 
 /**
- * Manually publish the selected activities and routes to GitHub Pages.
+ * Run this function repeatedly. Each call stages a small batch of Git blobs.
+ * Only the last call makes a single commit on main and triggers Pages.
  *
- * Requires a fine-grained GitHub token in Script Properties:
- * KUDOS_GITHUB_TOKEN, repository access only to naoiw/kudos, with
- * Contents read/write permissions. Do not paste the token in any sheet.
+ * See 06_BatchedPublish.gs for resumable state and progress helpers.
  */
 function publishApprovedPublicPreview() {
-  const preview = kudosPreparePublicPreview_();
-  const token = PropertiesService.getScriptProperties()
-    .getProperty('KUDOS_GITHUB_TOKEN');
-  if (!token) throw new Error('Missing Script Property KUDOS_GITHUB_TOKEN.');
-
-  const url = 'https://api.github.com/repos/' +
-    KUDOS_PUBLIC_PREVIEW_REPO + '/contents/' + KUDOS_PUBLIC_PREVIEW_PATH;
-  const headers = {
-    Authorization: 'Bearer ' + token,
-    Accept: 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'Kudos-GAS-Preview',
-  };
-  const readResponse = UrlFetchApp.fetch(url + '?ref=main', {
-    method: 'get',
-    headers,
-    muteHttpExceptions: true,
-  });
-  const readCode = readResponse.getResponseCode();
-  if (readCode !== 200 && readCode !== 404) {
-    throw new Error('GitHub preview read failed with status ' + readCode);
-  }
-
-  const body = {
-    message: 'data: update explicitly approved public statistics preview',
-    branch: 'main',
-    content: Utilities.base64Encode(
-      JSON.stringify(preview, null, 2) + '\n',
-      Utilities.Charset.UTF_8
-    ),
-  };
-  if (readCode === 200) {
-    const metadata = JSON.parse(readResponse.getContentText());
-    if (!metadata.sha) throw new Error('GitHub response is missing the file SHA.');
-    body.sha = metadata.sha;
-  }
-
-  const response = UrlFetchApp.fetch(url, {
-    method: 'put',
-    headers,
-    contentType: 'application/json',
-    payload: JSON.stringify(body),
-    muteHttpExceptions: true,
-  });
-  const status = response.getResponseCode();
-  if (status !== 200 && status !== 201) {
-    throw new Error('GitHub preview write failed with status ' + status);
-  }
-  Logger.log(
-    'Public preview updated: ' + preview.users.length + ' users, ' +
-    preview.activities.length + ' activities. GitHub Pages will redeploy.'
-  );
-  return { users: preview.users.length, activities: preview.activities.length };
+  return kudosPublishNextBatch_();
 }
