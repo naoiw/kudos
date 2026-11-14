@@ -59,8 +59,11 @@ try {
       source.indexOf(end, finish + 1) >= 0) {
     throw new Error('Missing or duplicated generated block markers in GAS.');
   }
-  const block = begin + '\nconst KUDOS_SPORT_RULES = Object.freeze(' +
-    JSON.stringify(rules, null, 2) + ');\n' + end;
+  // Git for Windows can check out .gs files with CRLF. A content-equivalent
+  // generated block must use the existing file's newline convention.
+  const newline = source.includes('\r\n') ? '\r\n' : '\n';
+  const block = (begin + '\nconst KUDOS_SPORT_RULES = Object.freeze(' +
+    JSON.stringify(rules, null, 2) + ');\n' + end).replace(/\n/g, newline);
   const expected = source.slice(0, start) + block + source.slice(finish + end.length);
   if (check) {
     if (source !== expected) throw new Error(
