@@ -1,6 +1,6 @@
 # Kudos — Google Apps Script ingestion
 
-このディレクトリには、管理者所有の **Google Drive → Google Sheets** GPX/TCX取り込み基盤があります。公開中の `naoiw.github.io/kudos` は引き続き架空のデモデータを表示します。**実データをGitHubへ送信する機能はまだ実装していません。**
+このディレクトリには、管理者所有の **Google Drive → Google Sheets** GPX/TCX取り込み基盤があります。公開中の `naoiw.github.io/kudos` へは、管理者が明示的に許可した統計プレビューだけを手動で公開できます。**GPS経路・個人情報は書き出しません。初期状態では公開禁止です。**
 
 ## 全体設計
 
@@ -50,7 +50,7 @@ Apps Scriptの **プロジェクトの設定 → スクリプト プロパティ
 | --- | --- |
 | `KUDOS_SPREADSHEET_ID` | 管理スプレッドシートのID |
 
-これ以外の秘密情報やGitHub PATは不要です。
+GPXの取り込みだけならこのプロパティのみで動作します。統計プレビューをGitHubへ明示的に公開する場合だけ、後述の `KUDOS_GITHUB_TOKEN` が必要です。
 
 ## 3. シート初期化とユーザー登録
 
@@ -116,3 +116,61 @@ Apps Scriptは1回あたりの実行時間に上限があります。既定で�
 ## Security / privacy
 
 No Google Drive IDs, user emails, access tokens, raw GPX data or route coordinates are committed to the repository. Public GitHub Pages still serves synthetic demo data. Real activity publishing requires an authenticated, privacy-reviewed export flow that is outside this phase.
+
+
+## 7. ウェブ画面へ統計プレビューを反映する（手動・公開許可制）
+
+**最重要：`naoiw/kudos` のGitHub Pagesは誰でも閲覧できます。** この操作は非公開Sheetsから統計を抽出して、公開リポジトリの `public/data/preview.json` へ**コミット**します。承認した情報はログインなしで誰でも参照できます。公開前提のテスト記録だけで利用してください。実際のプライベートな活動データは認証対応後まで公開しないでください。
+
+### 7-1. 更新ファイル
+
+既にGASをセットアップした場合、追加・更新するのは次のファイルです。
+
+- **追加**：`gas/05_PublicPreview.gs`
+- **更新**：`gas/00_Config.gs`（公開承認用の設定項目を追加）
+- **更新**：`gas/appsscript.json`（`script.external_request` 権限を追加）
+
+GASエディターへ反映したあと **`setupSheets()` をもう一度実行** してください。既存のUsers・Activities・ImportLogは消えず、Settingsに新しい設定行が追加されます。
+
+### 7-2. 明示的に公開を承認する
+
+`Settings` の項目を確認します。最初は必ず公開禁止です。
+
+| key | 初期値 | 公開に向けた指定 |
+| --- | --- | --- |
+| `public_preview_export_approval` | `disabled` | 公開すると決めたときのみ `I_APPROVE_PUBLIC_STATS` |
+| `public_preview_user_ids` | 空欄 | 公開用データとして承認するユーザーID（例：`user_02`、複数はカンマ区切り） |
+| `public_preview_date_precision` | `month` | 原則 `month` のまま。各活動の正確な日時を架空の日に置き換える |
+| `public_preview_exact_dates_approval` | `disabled` | `exact` を選ぶ場合だけ別途 `I_APPROVE_EXACT_DATES` が必要 |
+
+**重要**：`month` でも活動した**年月**・距離・運動時間・獲得標高・種目は公開されます。完全に匿名ではありません。日付を完全な架空データにしたい場合は、そもそもシートの元データをダミーにしてください。
+
+公開用データから必ず除外する項目：ユーザーの実名・メール・DriveフォルダID・ファイル名・ファイルID・ハッシュ・GPX内の活動名・心拍数・GPS座標・エンコード済み経路・都道府県。
+
+公開ユーザーは `u01`、`u02` といった別IDで表示し、表示名も「ユーザー 1」「ユーザー 2」に置換します。`Run` / `Ride` として確定した活動だけを表示します。`review_status=needs_review` の活動は公開しません。
+
+### 7-3. GitHubへの接続
+
+GitHubの **Settings → Developer settings → Personal access tokens → Fine-grained tokens** で、次の設定のトークンを作成します。
+
+- Repository access: **Only select repositories** → `naoiw/kudos`
+- Repository permissions: **Contents → Read and write**
+- 有効期限は必要最小限。トークンは公開しないこと。
+
+Apps Scriptのプロジェクト設定にある **スクリプト プロパティ**へ `KUDOS_GITHUB_TOKEN` として保存します。**Google SheetsやGitHubのファイルには書かないでください。**
+
+### 7-4. 実行手順
+
+1. `Settings` で承認項目・公開ユーザーを設定する。
+2. Apps Scriptの関数一覧から **`inspectApprovedPublicPreview()`** を実行し、件数や日付公開方法を確認する。
+3. 内容に問題がなければ **`publishApprovedPublicPreview()`** を手動実行する。
+4. <https://github.com/naoiw/kudos/blob/main/public/data/preview.json> で公開データの内容を確認する。
+5. GitHub ActionsのPagesデプロイ完了後、<https://naoiw.github.io/kudos/> でユーザー切り替えと集計を確認する。
+
+公開用JSONが未作成・未公開のときは、サイトはこれまでの架空サンプル表示へ戻ります。現段階のルートマップ・足跡マップには実際のGPS経路が表示されません（座標を出力しないためです）。
+
+既存の同期トリガーは**公開処理を呼び出しません**。新しいGPXを取り込んで表示を更新したいときは、`publishApprovedPublicPreview()` をもう一度実行してください。自動化は公開手順・公開許可を確認できたあとに追加します。
+
+### 7-5. 公開を止める
+
+`Settings.public_preview_export_approval` を `disabled` に戻すだけでは、**既にGitHubへ公開したJSONは消えません**。公開を終了する場合は、`public/data/preview.json` を無効化したダミーJSONへ置き換え、GitHub Pagesの再デプロイを確認してください。過去にコミットした情報はGit履歴に残り得るため、実際の私的情報を公開しないことが最重要です。
