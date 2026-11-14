@@ -54,6 +54,8 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 
 元の [running_page](https://github.com/yihong0618/running_page) の「足迹地图」と同様に、React + SVG で都道府県ごとの訪問状況を描画します。クリックすると対象都道府県のアクティビティに絞り込みます。
 
+地図は中部地方を中心に初期表示し、ドラッグで移動、マウスホイール／タッチのピンチ操作と画面上の＋／－ボタンで拡大縮小できます。都道府県を選択すると（未訪問の都道府県を含む）主な陸地が中央へ移動し、ズーム操作中も表示中心を保ちます。「戻す」で絞り込みを解除して初期表示へ戻せます。
+
 - 地図データ：[hfu/gmjpn21pref](https://github.com/hfu/gmjpn21pref) の日本47都道府県 GeoJSON（Unlicense / Public Domain）
 - 原典：国土地理院「地球地図日本」（[国土地理院ウェブサイト](https://www.gsi.go.jp/kankyochiri/gm_jpn.html)）
 - ランニングとサイクリングでフィルター可能
