@@ -223,18 +223,6 @@ function Dashboard() {
           {editingGoals ? '目標設定を閉じる' : '目標設定'}
         </button>
       </div>
-      {editingGoals && (
-        <div className="px-4 sm:px-6">
-          <GoalSettings
-            key={currentUser.user_id}
-            goals={sportGoals}
-            onSave={saveCurrentUserGoals}
-            onReset={resetCurrentUserGoals}
-            onClose={() => setEditingGoals(false)}
-          />
-        </div>
-      )}
-
       {/* One year selection controls every activity widget and page. */}
       <div
         className="mx-auto max-w-[1400px] overflow-x-auto px-4 pt-3 sm:px-6"
@@ -262,6 +250,18 @@ function Dashboard() {
           ))}
         </div>
       </div>
+
+      {editingGoals && (
+        <div className="px-4 sm:px-6">
+          <GoalSettings
+            key={currentUser.user_id}
+            goals={sportGoals}
+            onSave={saveCurrentUserGoals}
+            onReset={resetCurrentUserGoals}
+            onClose={() => setEditingGoals(false)}
+          />
+        </div>
+      )}
 
       <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
         {catalog.mode === 'public-preview'
@@ -356,7 +356,8 @@ function Dashboard() {
                 </div>
                 {catalog.datePrecision !== 'month' && (
                   <CalendarWidget
-                    key={year ?? 'all'}
+                    key={`${year ?? 'all'}-${filter}-${selectedPrefecture ?? 'all'}`}
+                    yearFilter={year}
                     selectedActivity={selectedActivity}
                     activities={filtered}
                     onSelectActivity={selectActivity}

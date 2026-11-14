@@ -46,3 +46,17 @@ test('monthly and yearly target cards use the shared selected year', () => {
   assert.match(cards, /a\.start_date_local\.slice\(0, 7\) !==/);
   assert.match(cards, /\$\{now\.getFullYear\(\)\}-\$\{String\(now\.getMonth\(\) \+ 1\)/);
 });
+
+
+test('calendar stays in the globally selected year, including empty sport filters', () => {
+  const calendar = source('src/components/CalendarWidget.tsx');
+  const dashboard = source('src/themes/dashboard/index.tsx');
+  assert.match(dashboard, /<CalendarWidget[\s\S]*?yearFilter=\{year\}/);
+  assert.match(calendar, /yearFilter === null\s*\?\s*today\s*:\s*new Date\(yearFilter, today\.getMonth\(\), 1\)/);
+  assert.match(calendar, /yearFilter !== null && next\.getFullYear\(\) !== yearFilter/);
+  assert.match(calendar, /yearFilter !== null && year === yearFilter && monthIndex === 0/);
+  assert.match(calendar, /yearFilter !== null && year === yearFilter && monthIndex === 11/);
+  assert.match(calendar, /yearFilter === null \|\| yearFilter === today\.getFullYear\(\)/);
+  assert.ok(dashboard.indexOf('One year selection controls') <
+    dashboard.indexOf('{editingGoals && ('));
+});

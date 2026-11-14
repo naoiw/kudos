@@ -5,12 +5,14 @@ import { useLocale } from '../hooks/useLocale';
 
 interface CalendarWidgetProps {
   activities: Activity[];
+  yearFilter: number | null;
   selectedActivity?: Activity | null;
   onSelectActivity: (activity: Activity | null) => void;
 }
 
 export function CalendarWidget({
   activities,
+  yearFilter,
   selectedActivity,
   onSelectActivity,
 }: CalendarWidgetProps) {
@@ -27,7 +29,11 @@ export function CalendarWidget({
   );
   const initial = selectedActivity?.start_date_local || latest;
   const [month, setMonth] = useState(() => {
-    const date = initial ? new Date(initial) : today;
+    const date = initial
+      ? new Date(initial)
+      : yearFilter === null
+        ? today
+        : new Date(yearFilter, today.getMonth(), 1);
     return new Date(date.getFullYear(), date.getMonth(), 1);
   });
   const [day, setDay] = useState<number | null>(() =>
@@ -68,11 +74,14 @@ export function CalendarWidget({
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const dayActivities = day === null ? [] : (byDay.get(day) ?? []);
   const moveMonth = (delta: number) => {
-    setMonth(new Date(year, monthIndex + delta, 1));
+    const next = new Date(year, monthIndex + delta, 1);
+    if (yearFilter !== null && next.getFullYear() !== yearFilter) return;
+    setMonth(next);
     setDay(null);
   };
   const goToDate = (date: Date) => {
-    setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    const targetYear = yearFilter ?? date.getFullYear();
+    setMonth(new Date(targetYear, date.getMonth(), 1));
     setDay(null);
   };
   const monthLabel = month.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', {
@@ -90,6 +99,7 @@ export function CalendarWidget({
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(-1)}
+            disabled={yearFilter !== null && year === yearFilter && monthIndex === 0}
             aria-label={isJapanese ? '前月' : 'Previous month'}
           >
             ←
@@ -97,6 +107,7 @@ export function CalendarWidget({
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(1)}
+            disabled={yearFilter !== null && year === yearFilter && monthIndex === 11}
             aria-label={isJapanese ? '翌月' : 'Next month'}
           >
             →
@@ -108,12 +119,14 @@ export function CalendarWidget({
           {monthActivities.length} {isJapanese ? '件' : 'activities'} ·{' '}
           {formatDistance(distance)} km
         </span>
-        <button
-          className="rounded px-2 hover:bg-[var(--color-bg)]"
-          onClick={() => goToDate(today)}
-        >
-          {isJapanese ? '今月' : 'This month'}
-        </button>
+        {(yearFilter === null || yearFilter === today.getFullYear()) && (
+          <button
+            className="rounded px-2 hover:bg-[var(--color-bg)]"
+            onClick={() => goToDate(today)}
+          >
+            {isJapanese ? '今月' : 'This month'}
+          </button>
+        )}
         {latest && (
           <button
             className="rounded px-2 hover:bg-[var(--color-bg)]"
