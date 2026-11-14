@@ -26,3 +26,11 @@ jobs:
 
       - name: Test Apps Script parser, ingestion, and clasp safety
         run: node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs
+
+      - name: Check real clasp 3.4.1 file selection without authentication
+        run: |
+          set -euo pipefail
+          trap 'rm -f .clasp.json' EXIT
+          node -e "require('node:fs').writeFileSync('.clasp.json', JSON.stringify({scriptId: '1'.repeat(57), rootDir: 'gas'}))"
+          npx --yes @google/clasp@3.4.1 show-file-status --json > "$RUNNER_TEMP/clasp-file-status.json"
+          node scripts/verify-gas-sync.cjs "$RUNNER_TEMP/clasp-file-status.json"
