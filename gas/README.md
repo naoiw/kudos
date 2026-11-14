@@ -245,3 +245,7 @@ Webアプリ側でも旧形式の公開JSONについてタイトルを用いた�
 ## 11. 種目判定ルールの更新
 
 `gas/00_Config.gs`の生成済み定義は直接変更しないでください。共通ルール[`shared/sport-rules.json`](../shared/sport-rules.json)を更新し、`node scripts/generate-sport-rules.cjs`を実行します。変更後は`node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs`を実行してください。GAS反映は従来どおりclaspの明示的な手動操作のみです。定期トリガーは有効化しません。
+
+## 12. 不変な公開run_id
+
+`run_id`はSheetsに格納した非公開`activity_id`のSHA-256先頭48bitを数値化して付与します。元のDrive ID、ユーザーID、activity_idは公開しません。公開前に欠損と重複IDを検証し、異常があれば公開を中断します。詳細は[`docs/stable-activity-ids.md`](../docs/stable-activity-ids.md)を参照してください。過去に公開したデータはそのまま残り、今後手動で再PublishしたときにIDが切り替わります。経路チャンクも同じIDを使用します。

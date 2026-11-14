@@ -58,7 +58,8 @@ function kudosPreviewDuration_(seconds) {
 
 /**
  * Project selected spreadsheet rows into the dashboard activity schema.
- * Public-facing IDs stay stable aliases to avoid exposing Sheets/Drive IDs.
+ * Public run_id is derived from each immutable private activity_id; no
+ * Sheets/Drive identifiers are exposed in the public manifest.
  */
 /**
  * Do not publish unresolved records unless a recognized name/explicit
@@ -92,6 +93,7 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
     display_name: kudosText_(active.get(id).display_name) || 'ユーザー ' + (i + 1),
   }));
   const publicActivities = [];
+  const seenRunIds = new Set();
 
   ids.forEach((id, i) => {
     const user = active.get(id);
@@ -123,7 +125,12 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
         kudosLogKey_(id, kudosText_(row.drive_file_id))
       );
       const routeSegments = route || [];
-      const runId = (i + 1) * 1000000 + index + 1;
+      const runId = kudosStablePublicRunId_(row.activity_id);
+      if (seenRunIds.has(runId)) {
+        throw new Error('Duplicate stable public run_id in approved activities; ' +
+          'review private activity_id values before publishing.');
+      }
+      seenRunIds.add(runId);
       publicActivities.push({
         run_id: runId,
         user_id: safeUsers[i].user_id,
@@ -158,6 +165,7 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
   });
   return {
     schema_version: 1,
+    id_version: 1,
     genre_version: 1,
     mode: 'public-stats-preview',
     generated_at: now,

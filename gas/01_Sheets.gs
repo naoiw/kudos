@@ -89,10 +89,28 @@ function kudosSaveImportLog_(sheet, current, update) {
   return row;
 }
 
+/**
+ * The stable public run_id is the first 48 bits of SHA-256(private activity_id).
+ * It is an exact JavaScript safe integer, independent of sorting, timestamps,
+ * titles and publishing order. The source activity_id is not exported.
+ * Check collisions across the selected public snapshot before publishing.
+ */
+function kudosStablePublicRunId_(activityId) {
+  const privateId = kudosText_(activityId);
+  if (!privateId) {
+    throw new Error('Missing private activity_id; refusing to publish an unstable run_id.');
+  }
+  const runId = Number.parseInt(kudosSha256_(privateId).slice(0, 12), 16);
+  if (!Number.isSafeInteger(runId) || runId < 0) {
+    throw new Error('Invalid stable public run_id derived from activity_id.');
+  }
+  return runId;
+}
+
 function kudosSaveActivity_(sheet, current, parsed, user, file, digest, settings, now) {
   const activityId = current ? current.activity_id :
     'act_' + kudosSha256_(user.user_id + ':' + file.getId()).slice(0, 20);
-  const runId = Number.parseInt(kudosSha256_(activityId).slice(0, 12), 16);
+  const runId = kudosStablePublicRunId_(activityId);
   const override = current ? kudosText_(current.sport_override) : '';
   const nameOverride = current ? kudosText_(current.name_override) : '';
   const activityName = parsed.name || file.getName();
