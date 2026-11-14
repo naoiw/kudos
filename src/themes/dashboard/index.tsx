@@ -58,6 +58,9 @@ function Dashboard() {
   );
   const currentUser =
     catalog.users.find((user) => user.user_id === selectedUserId) ||
+    catalog.users.find((user) =>
+      catalog.activities.some((activity) => activity.user_id === user.user_id)
+    ) ||
     catalog.users[0];
   const activities = useMemo(
     () => catalog.activities.filter((activity) => activity.user_id === currentUser.user_id),
