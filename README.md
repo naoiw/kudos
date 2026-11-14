@@ -94,3 +94,9 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 GASの公開処理は実行上限を超えないよう、`05_PublicPreview.gs` + `06_BatchedPublish.gs` の分割処理に変更しました。`publishApprovedPublicPreview()` を繰り返し手動実行して全件の経路Blobを準備し、最後に1回だけ `main` の `preview.json` と経路チャンクを更新します。スケジュールは無効のままです。公開中のサイトは最終コミットまで以前のデータを表示します。
 
 詳しくは [GAS公開処理の手順](gas/README.md#7-4-大量gpxの分割公開2026年11月更新) を参照してください。
+
+## アクティビティ種目
+
+Kudosの種目は**サイクリング・ウォーキング・ゴルフ**の3種類（表示順も同じ）です。アクティビティの名前を優先してキーワード判定し、判断できないものはGPSや従来の種類推定を利用します。以前の `Run` もウォーキングに統一します。
+
+既存の公開済みデータはブラウザ側で互換分類するため、GPS経路の再Publishは必要ありません。管理シートを統一する場合はGASの `applyActivityOverrides()` を1回実行してください。詳しくは [GAS手順](gas/README.md#9-アクティビティ種目の判定サイクリングウォーキングゴルフ) を参照してください。
