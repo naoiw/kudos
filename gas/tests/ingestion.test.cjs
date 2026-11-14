@@ -15,6 +15,7 @@ const files = [
   'gas/03_Sync.gs',
   'gas/04_Triggers.gs',
   'gas/05_PublicPreview.gs',
+  'gas/06_BatchedPublish.gs',
 ];
 
 class Element {
@@ -165,6 +166,7 @@ function createFixture() {
       getFileById(id) {
         if (id === 'tracked-gpx') return fakeFile('tracked-gpx', 'run-gpx');
         if (id === 'tracked-tcx') return fakeFile('tracked-tcx', 'bike-tcx');
+        if (/^tracked-gpx-[0-9]+$/.test(id)) return fakeFile(id, 'run-gpx');
         throw new Error('File not shared');
       },
       getFolderById(id) {
@@ -599,4 +601,140 @@ test('manual import progress reports completed rows and never creates triggers',
   assert.equal(summary.alice.imported, 1);
   const repeated = evaluate('importNextManualBatch()');
   assert.equal(repeated.files_imported, 0);
+});
+
+
+test('batched publisher stages routes as orphaned Git blobs before one final commit', () => {
+  const { ss, context, evaluate } = createFixture();
+  evaluate('setupSheets()');
+  evaluate("PropertiesService.getScriptProperties().setProperty('KUDOS_GITHUB_TOKEN', 'test-token')");
+  const settings = ss.getSheetByName('Settings');
+  for (const row of settings.rows) {
+    if (row[0] === 'public_preview_export_approval') row[1] = 'I_APPROVE_PUBLIC_STATS';
+    if (row[0] === 'public_preview_user_ids') row[1] = 'user_02';
+  }
+  ss.getSheetByName('Users').getRange(2, 1, 1, 6)
+    .setValues([['user_02', 'Cyclist', '', 'folderB', 'Asia/Tokyo', true]]);
+
+  const activities = ss.getSheetByName('Activities');
+  const headers = activities.rows[0];
+  const activityRows = Array.from({ length: 11 }, (_, i) => {
+    const record = {
+      activity_id: 'a' + i,
+      user_id: 'user_02',
+      drive_file_id: 'tracked-gpx-' + i,
+      name: 'Ride ' + i,
+      start_at_utc: '2026-11-14T12:00:00Z',
+      sport_final: 'Ride',
+      review_status: 'ok',
+      distance_m: 5000 + i * 100,
+      moving_time_s: 1800,
+      elevation_gain_m: 30,
+    };
+    return headers.map((header) => record[header] ?? '');
+  });
+  activities.getRange(2, 1, activityRows.length, headers.length)
+    .setValues(activityRows);
+
+  const staged = new Map();
+  const requests = [];
+  let serial = 1;
+  const sha = () => String(serial++).padStart(40, '0');
+  context.UrlFetchApp = { fetch(url, options) {
+    const path = url.slice('https://api.github.com/repos/naoiw/kudos'.length);
+    const body = options.payload ? JSON.parse(options.payload) : null;
+    requests.push({ method: options.method, path, body });
+    let response;
+    if (path === '/git/blobs' && options.method === 'post') {
+      const hash = sha();
+      staged.set(hash, body.content);
+      response = { sha: hash };
+    } else if (path === '/git/ref/heads/main' && options.method === 'get') {
+      response = { object: { sha: 'a'.repeat(40) } };
+    } else if (path === '/git/commits/' + 'a'.repeat(40)) {
+      response = { tree: { sha: 'b'.repeat(40) } };
+    } else if (path === '/git/trees' && options.method === 'post') {
+      response = { sha: 'c'.repeat(40) };
+    } else if (path === '/git/commits' && options.method === 'post') {
+      response = { sha: 'd'.repeat(40) };
+    } else if (path === '/git/refs/heads/main' && options.method === 'patch') {
+      response = { ref: 'refs/heads/main' };
+    } else {
+      throw new Error('Unexpected mock GitHub request: ' + path);
+    }
+    return { getResponseCode: () => 200, getContentText: () => JSON.stringify(response) };
+  } };
+
+  const first = evaluate('publishApprovedPublicPreview()');
+  assert.equal(first.processed, 8);
+  assert.equal(first.published, false);
+  assert.equal(requests.filter((r) => r.method === 'patch').length, 0,
+    'main must not be updated before all chunks are ready');
+  assert.equal(evaluate('showPublicPreviewProgress()').processed, 8);
+
+  const second = evaluate('publishApprovedPublicPreview()');
+  assert.equal(second.processed, 11);
+  assert.equal(second.total, 11);
+  assert.equal(second.published, true);
+  assert.equal(second.chunks, 2);
+  assert.equal(requests.filter((r) => r.path === '/git/refs/heads/main').length, 1);
+  assert.equal(evaluate('showPublicPreviewProgress()').processed, 0,
+    'checkpoint is cleaned after successful final publication');
+  const tree = requests.find((r) => r.path === '/git/trees').body.tree;
+  assert.equal(tree.length, 3);
+  const chunkEntries = tree.filter((entry) => entry.path.includes('/exports/'));
+  assert.equal(chunkEntries.length, 2);
+  const chunkRoutes = chunkEntries.flatMap((entry) => JSON.parse(staged.get(entry.sha)).routes);
+  assert.equal(chunkRoutes.length, 11);
+  assert.ok(chunkRoutes.every((route) => Array.isArray(route.route_segments) &&
+    route.route_segments.length > 0));
+  const manifestEntry = tree.find((entry) => entry.path === 'public/data/preview.json');
+  const manifest = JSON.parse(staged.get(manifestEntry.sha));
+  assert.equal(manifest.schema_version, 2);
+  assert.equal(manifest.activities.length, 11);
+  assert.equal(manifest.route_chunks.length, 2);
+  assert.equal(manifest.users[0].display_name, 'Cyclist');
+  assert.equal(JSON.stringify(manifest).includes('tracked-gpx-'), false,
+    'private Drive file IDs must not leave GAS');
+  assert.deepEqual(chunkRoutes.map((row) => row.run_id).sort((a, b) => a - b),
+    manifest.activities.map((row) => row.run_id).sort((a, b) => a - b));
+});
+
+test('changed workbook metadata requires an explicit reset before continuing', () => {
+  const { ss, context, evaluate } = createFixture();
+  evaluate('setupSheets()');
+  evaluate("PropertiesService.getScriptProperties().setProperty('KUDOS_GITHUB_TOKEN', 'test-token')");
+  const settings = ss.getSheetByName('Settings');
+  for (const row of settings.rows) {
+    if (row[0] === 'public_preview_export_approval') row[1] = 'I_APPROVE_PUBLIC_STATS';
+    if (row[0] === 'public_preview_user_ids') row[1] = 'user_02';
+  }
+  ss.getSheetByName('Users').getRange(2, 1, 1, 6)
+    .setValues([['user_02', 'Cyclist', '', 'folderB', 'Asia/Tokyo', true]]);
+  const activities = ss.getSheetByName('Activities');
+  const headers = activities.rows[0];
+  const rows = Array.from({ length: 9 }, (_, i) => headers.map((column) => ({
+    activity_id: 'a' + i,
+    user_id: 'user_02', drive_file_id: 'tracked-gpx-' + i,
+    name: 'Ride ' + i,
+    start_at_utc: '2026-11-14T12:00:00Z', sport_final: 'Ride',
+    review_status: 'ok', distance_m: 5000, moving_time_s: 1000,
+  })[column] ?? ''));
+  activities.getRange(2, 1, rows.length, headers.length).setValues(rows);
+
+  context.UrlFetchApp = { fetch(_url, options) {
+    if (options.method !== 'post') throw new Error('Should only stage a blob');
+    return {
+      getResponseCode: () => 201,
+      getContentText: () => JSON.stringify({ sha: 'a'.repeat(40) }),
+    };
+  } };
+  const one = evaluate('publishApprovedPublicPreview()');
+  assert.equal(one.processed, 8);
+  const nameColumn = headers.indexOf('name') + 1;
+  activities.getRange(2, nameColumn).setValue('A changed ride');
+  assert.equal(evaluate('showPublicPreviewProgress()').needs_reset, true);
+  assert.throws(() => evaluate('publishApprovedPublicPreview()'), /resetPublicPreviewBatch/);
+  evaluate('resetPublicPreviewBatch()');
+  assert.equal(evaluate('showPublicPreviewProgress()').needs_reset, false);
 });

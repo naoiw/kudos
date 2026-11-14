@@ -88,3 +88,9 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 - GPXの経路から47都道府県の境界と交差する地域を判定し、足跡マップへ訪問状況を反映します。
 - 都道府県の選択でアクティビティを絞り込み、ルートマップも選択地域内の走行箇所へフォーカスします。
 - [GAS取り込み・更新手順](gas/README.md#未取り込みgpxの手動一括処理定期実行なし)
+
+### 大量GPXの公開は分割実行
+
+GASの公開処理は実行上限を超えないよう、`05_PublicPreview.gs` + `06_BatchedPublish.gs` の分割処理に変更しました。`publishApprovedPublicPreview()` を繰り返し手動実行して全件の経路Blobを準備し、最後に1回だけ `main` の `preview.json` と経路チャンクを更新します。スケジュールは無効のままです。公開中のサイトは最終コミットまで以前のデータを表示します。
+
+詳しくは [GAS公開処理の手順](gas/README.md#7-4-大量gpxの分割公開2026年11月更新) を参照してください。
