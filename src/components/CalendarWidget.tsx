@@ -15,7 +15,7 @@ export function CalendarWidget({
   onSelectActivity,
 }: CalendarWidgetProps) {
   const { locale } = useLocale();
-  const zh = locale === 'ja';
+  const isJapanese = locale === 'ja';
   const [today] = useState(() => new Date());
   const latest = useMemo(
     () =>
@@ -75,13 +75,13 @@ export function CalendarWidget({
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
     setDay(null);
   };
-  const monthLabel = month.toLocaleDateString(zh ? 'ja-JP' : 'en-US', {
+  const monthLabel = month.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', {
     year: 'numeric',
     month: 'long',
   });
   return (
     <section
-      aria-label={zh ? 'アクティビティカレンダー' : 'Activity calendar'}
+      aria-label={isJapanese ? 'アクティビティカレンダー' : 'Activity calendar'}
       className="w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -90,14 +90,14 @@ export function CalendarWidget({
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(-1)}
-            aria-label={zh ? '前月' : 'Previous month'}
+            aria-label={isJapanese ? '前月' : 'Previous month'}
           >
             ←
           </button>
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(1)}
-            aria-label={zh ? '翌月' : 'Next month'}
+            aria-label={isJapanese ? '翌月' : 'Next month'}
           >
             →
           </button>
@@ -105,26 +105,26 @@ export function CalendarWidget({
       </div>
       <div className="mb-3 flex items-center gap-2 text-xs text-[var(--color-muted)]">
         <span className="mr-auto">
-          {monthActivities.length} {zh ? '件' : 'activities'} ·{' '}
+          {monthActivities.length} {isJapanese ? '件' : 'activities'} ·{' '}
           {formatDistance(distance)} km
         </span>
         <button
           className="rounded px-2 hover:bg-[var(--color-bg)]"
           onClick={() => goToDate(today)}
         >
-          {zh ? '今月' : 'This month'}
+          {isJapanese ? '今月' : 'This month'}
         </button>
         {latest && (
           <button
             className="rounded px-2 hover:bg-[var(--color-bg)]"
             onClick={() => goToDate(new Date(latest))}
           >
-            {zh ? '最近のアクティビティ' : 'Latest'}
+            {isJapanese ? '最近のアクティビティ' : 'Latest'}
           </button>
         )}
       </div>
       <div className="mb-1 grid grid-cols-7 text-center text-xs text-[var(--color-muted)]">
-        {(zh
+        {(isJapanese
           ? ['月', '火', '水', '木', '金', '土', '日']
           : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         ).map((label) => (
@@ -144,7 +144,7 @@ export function CalendarWidget({
               type="button"
               disabled={!list.length}
               aria-pressed={day === number}
-              aria-label={`${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(number).padStart(2, '0')} · ${list.length} ${zh ? '件' : 'activities'} · ${km.toFixed(1)} km`}
+              aria-label={`${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(number).padStart(2, '0')} · ${list.length} ${isJapanese ? '件' : 'activities'} · ${km.toFixed(1)} km`}
               className={`calendar-day relative flex h-9 flex-col items-center justify-center rounded-md text-xs ${list.length ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/30' : 'text-[var(--color-muted)]'} ${day === number ? 'ring-2 ring-[var(--color-accent)]' : ''}`}
               onClick={() => {
                 setDay(number);
@@ -165,7 +165,7 @@ export function CalendarWidget({
         <div className="mt-3 space-y-1 border-t border-[var(--color-border)] pt-3">
           <p className="mb-2 text-xs text-[var(--color-muted)]">
             {monthIndex + 1}/{day} ·{' '}
-            {zh ? 'アクティビティを選んで経路を見る' : 'Select an activity to view its route'}
+            {isJapanese ? 'アクティビティを選んで経路を見る' : 'Select an activity to view its route'}
           </p>
           {dayActivities.map((activity) => (
             <button
@@ -186,7 +186,7 @@ export function CalendarWidget({
       )}
       {!monthActivities.length && (
         <p className="mt-3 text-center text-xs text-[var(--color-muted)]">
-          {zh ? '今月没有活动' : 'No activities this month'}
+          {isJapanese ? 'この月のアクティビティはありません' : 'No activities this month'}
         </p>
       )}
     </section>
