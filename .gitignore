@@ -5,3 +5,7 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Private Apps Script project identifiers and developer credentials
+.clasp.json
+gas/.clasp.json
