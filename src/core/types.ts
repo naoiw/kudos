@@ -6,8 +6,8 @@ export interface Activity {
   moving_time: string; // "H:MM:SS"
   type: 'Ride' | 'Walk' | 'Golf' | string;
   subtype?: string;
-  start_date: string;
-  start_date_local: string;
+  start_date: string; // Exact timestamp or month-only YYYY-MM.
+  start_date_local: string; // Exact timestamp or month-only YYYY-MM.
   location_country: string | null;
   summary_polyline: string | null;
   route_segments?: string[]; // Disjoint GPX/TCX segments; encoded polyline precision 5.

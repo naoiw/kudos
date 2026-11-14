@@ -27,6 +27,7 @@ import { JapanMap } from '@/components/JapanMap';
 import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { PersonalBest } from '@/components/PersonalBest';
+import { activityYear } from '@/core/datePrecision';
 
 const TracksPage = lazy(() =>
   import('@/components/TracksPage').then((module) => ({
@@ -132,9 +133,9 @@ function Dashboard() {
         }
         if (
           year !== null &&
-          new Date(activity.start_date_local).getFullYear() !== year
+          activityYear(activity.start_date_local) !== year
         ) {
-          setYear(new Date(activity.start_date_local).getFullYear());
+          setYear(activityYear(activity.start_date_local));
         }
       }
     },
@@ -170,7 +171,7 @@ function Dashboard() {
         </label>
         <span className="text-xs text-[var(--color-muted)]">
           {catalog.mode === 'public-preview'
-            ? `公開用の統計データ · ${catalog.datePrecision === 'month' ? '日付は月単位に匿名化' : '公開承認済み'}`
+            ? `公開用の統計データ · ${catalog.datePrecision === 'month' ? '年月のみ公開（日・週単位の統計は非表示）' : '正確な活動日時を公開承認済み'}`
             : '架空のデモデータ'}
         </span>
       </div>
@@ -201,6 +202,7 @@ function Dashboard() {
       >
         {page === 'summary' ? (
           <SummaryPage
+            datePrecision={catalog.datePrecision}
             activities={activities}
             onSelectActivity={(activity) => {
               navigate('home');
@@ -225,19 +227,23 @@ function Dashboard() {
               {/* Left column */}
               <div className="min-w-0 space-y-6 overflow-hidden">
                 <StatsCards
+                  datePrecision={catalog.datePrecision}
                   activities={filtered}
                   allActivities={activities}
                   year={year}
                   filter={filter}
                   onSelectActivity={selectActivity}
                 />
-                <ContributionHeatmap
-                  activities={activities}
-                  year={heatmapYear}
-                  filter={filter}
-                  onSelectActivity={selectActivity}
-                />
+                {catalog.datePrecision !== 'month' && (
+                  <ContributionHeatmap
+                    activities={activities}
+                    year={heatmapYear}
+                    filter={filter}
+                    onSelectActivity={selectActivity}
+                  />
+                )}
                 <ActivityLog
+                  datePrecision={catalog.datePrecision}
                   activities={filtered}
                   years={years}
                   year={year}
@@ -276,12 +282,14 @@ function Dashboard() {
                   activities={activities}
                   onSelectActivity={selectActivity}
                 />
-                <CalendarWidget
-                  key={year ?? 'all'}
-                  selectedActivity={selectedActivity}
-                  activities={filtered}
-                  onSelectActivity={selectActivity}
-                />
+                {catalog.datePrecision !== 'month' && (
+                  <CalendarWidget
+                    key={year ?? 'all'}
+                    selectedActivity={selectedActivity}
+                    activities={filtered}
+                    onSelectActivity={selectActivity}
+                  />
+                )}
               </div>
             </div>
           </main>

@@ -365,8 +365,8 @@ test('preview keeps spreadsheet display names without exporting account credenti
   assert.equal(activity.location_country, '東京都');
   assert.equal(activity.average_heartrate, null);
   assert.equal(activity.name, 'Hospital visit');
-  assert.ok(activity.start_date_local.startsWith('2026-11-'));
-  assert.ok(activity.start_date_local.endsWith('T12:00:00'));
+  assert.equal(activity.start_date_local, '2026-11');
+  assert.equal(activity.start_date_local, '2026-11');
   assert.equal(activity.distance, 78000);
 
   const json = JSON.stringify(result);
@@ -450,7 +450,7 @@ test('preview carries real display names and activity labels while withholding s
   assert.equal(activity.location_country, '東京都');
   assert.equal(activity.average_heartrate, null);
   assert.equal(activity.start_date_local.slice(0, 7), '2022-07');
-  assert.ok(activity.start_date_local.endsWith('T12:00:00'));
+  assert.equal(activity.start_date_local, '2022-07');
   const json = JSON.stringify(obj);
   for (const marker of [
     'private_account', 'private@example.org',
@@ -953,4 +953,47 @@ test('legacy numeric route IDs remain compatible with stable v2 chunk join', () 
   const byId = new Map(stableChunks.map((row) => [row.run_id, row.route_segments]));
   assert.equal(byId.size, preview.activities.length);
   assert.ok(preview.activities.every((activity) => byId.has(activity.run_id)));
+});
+
+
+test('month-only publication contains no synthetic days or times; exact keeps local date', () => {
+  const { evaluate } = createFixture();
+  const people = [{ user_id: 'a', enabled: true, timezone: 'Asia/Tokyo' }];
+  const acts = [
+    { user_id: 'a', activity_id: 'act_new_year', name: 'Ride',
+      sport_final: 'Ride', review_status: 'ok', distance_m: 8000,
+      moving_time_s: 1800, start_at_utc: '2026-12-31T16:30:00Z' },
+    { user_id: 'a', activity_id: 'act_last_year', name: 'Ride',
+      sport_final: 'Ride', review_status: 'ok', distance_m: 8000,
+      moving_time_s: 1800, start_at_utc: '2026-12-31T14:30:00Z' },
+  ];
+  const run = precision => evaluate(
+    'kudosBuildPublicPreview_(_users, _activities, ["a"], _precision, "now")',
+    { _users: people, _activities: acts, _precision: precision }
+  );
+  const month = run('month');
+  const exact = run('exact');
+  assert.deepEqual(Array.from(month.activities, a => a.start_date_local),
+    ['2027-01', '2026-12']);
+  assert.deepEqual(Array.from(exact.activities, a => a.start_date_local),
+    ['2027-01-01T01:30:00', '2026-12-31T23:30:00']);
+  assert.deepEqual(Array.from(month.activities, a => a.run_id),
+    Array.from(exact.activities, a => a.run_id));
+  assert.ok(month.activities.every(a => /^\d{4}-\d{2}$/.test(a.start_date_local)));
+  assert.equal(month.date_precision, 'month');
+  assert.equal(exact.date_precision, 'exact');
+});
+
+test('exact date export requires separate explicit approval', () => {
+  const { evaluate, ss } = createFixture();
+  evaluate('setupSheets()');
+  const settings = ss.getSheetByName('Settings');
+  const approve = key => settings.rows.find(row => row[0] === key);
+  approve('public_preview_export_approval')[1] = 'I_APPROVE_PUBLIC_STATS';
+  approve('public_preview_user_ids')[1] = 'a';
+  approve('public_preview_date_precision')[1] = 'exact';
+  assert.throws(() => evaluate('kudosPreviewSettings_(_ss)', { _ss: ss }),
+    /Exact dates require/);
+  approve('public_preview_exact_dates_approval')[1] = 'I_APPROVE_EXACT_DATES';
+  assert.equal(evaluate('kudosPreviewSettings_(_ss).precision', { _ss: ss }), 'exact');
 });

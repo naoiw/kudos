@@ -249,3 +249,7 @@ Webアプリ側でも旧形式の公開JSONについてタイトルを用いた�
 ## 12. 不変な公開run_id
 
 `run_id`はSheetsに格納した非公開`activity_id`のSHA-256先頭48bitを数値化して付与します。元のDrive ID、ユーザーID、activity_idは公開しません。公開前に欠損と重複IDを検証し、異常があれば公開を中断します。詳細は[`docs/stable-activity-ids.md`](../docs/stable-activity-ids.md)を参照してください。過去に公開したデータはそのまま残り、今後手動で再PublishしたときにIDが切り替わります。経路チャンクも同じIDを使用します。
+
+## 13. 公開日時の精度
+
+`public_preview_date_precision=month`（デフォルト）の公開JSONには年月（`YYYY-MM`）のみを書き込み、実在しない日付・時刻は作成しません。`exact`はユーザーのローカル日時を公開するため、従来どおり`I_APPROVE_EXACT_DATES`の別承認が必須です。詳細は[`docs/date-precision.md`](../docs/date-precision.md)を参照してください。

@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { Activity } from '../types';
+import type { DatePrecision } from '../core/datePrecision';
 import { useLocale } from '../hooks/useLocale';
 import { SPORT_ORDER, sportLabel } from '../core/sports';
 import { formatPace } from '../hooks/useActivities';
@@ -33,15 +34,18 @@ function SummaryCard({
   label,
   zh,
   onSelectActivity,
+  monthOnly,
 }: {
   activities: Activity[];
   period: SummaryPeriod;
+  monthOnly: boolean;
   label: string;
   zh: boolean;
   onSelectActivity: (a: Activity) => void;
 }) {
   const stats = summarize(activities);
-  const chart = summaryChart(activities, period, label);
+  const chartAvailable = !monthOnly || period !== 'month';
+  const chart = chartAvailable ? summaryChart(activities, period, label) : [];
   const metrics = [
     [zh ? '活動回数' : 'Activities', String(stats.count)],
     [
@@ -115,7 +119,7 @@ function SummaryCard({
           </div>
         ))}
       </dl>
-      <div
+      {chartAvailable ? <div
         role="img"
         aria-label={`${label}: ${chart.map((d) => `${d.label}: ${d.km} km`).join(', ')}`}
       >
@@ -165,8 +169,13 @@ function SummaryCard({
         <p className="mt-1 text-right text-xs text-[var(--color-muted)]">
           {chartUnit} · km
         </p>
-      </div>
-      {period === 'day' && (
+      </div> : (
+        <p className="text-sm text-[var(--color-muted)]" role="note">
+          {zh ? '月単位で公開されているため、日別の内訳は表示しません。'
+            : 'Daily breakdown is unavailable for month-only public data.'}
+        </p>
+      )}
+      {period === 'day' && !monthOnly && (
         <div className="mt-4 space-y-2 border-t border-[var(--color-border)] pt-4">
           {activities.map((a) => (
             <button
@@ -191,12 +200,15 @@ function SummaryCard({
 export function SummaryPage({
   activities,
   onSelectActivity,
+  datePrecision,
 }: {
   activities: Activity[];
   onSelectActivity: (a: Activity) => void;
+  datePrecision?: DatePrecision | null;
 }) {
   const { locale, t } = useLocale();
   const zh = locale === 'ja';
+  const monthOnly = datePrecision === 'month';
   const [period, setPeriod] = useState<SummaryPeriod>('month');
   const [sport, setSport] = useState('all');
   const [year, setYear] = useState('all');
@@ -224,13 +236,19 @@ export function SummaryPage({
       ),
     [activities, sport, year, period]
   );
-  const periods: [SummaryPeriod, string][] = [
-    ['year', zh ? '年' : 'Year'],
-    ['month', zh ? '月' : 'Month'],
-    ['week', zh ? '週' : 'Week'],
-    ['day', zh ? '日' : 'Day'],
-    ['life', 'Life'],
-  ];
+  const periods: [SummaryPeriod, string][] = monthOnly
+    ? [
+        ['year', zh ? '年' : 'Year'],
+        ['month', zh ? '月' : 'Month'],
+        ['life', 'Life'],
+      ]
+    : [
+        ['year', zh ? '年' : 'Year'],
+        ['month', zh ? '月' : 'Month'],
+        ['week', zh ? '週' : 'Week'],
+        ['day', zh ? '日' : 'Day'],
+        ['life', 'Life'],
+      ];
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -281,6 +299,10 @@ export function SummaryPage({
           </label>
         </div>
       </div>
+      {monthOnly && <p className="mb-4 text-sm text-[var(--color-muted)]" role="note">
+        {zh ? '活動日時は年月のみ公開されています。日・週別集計は表示しません。'
+          : 'Only year and month are public; daily and weekly statistics are hidden.'}
+      </p>}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
@@ -325,6 +347,7 @@ export function SummaryPage({
               activities={items}
               period={period}
               zh={zh}
+              monthOnly={monthOnly}
               onSelectActivity={onSelectActivity}
             />
           ))}

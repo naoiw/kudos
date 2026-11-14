@@ -3,8 +3,10 @@ import type { Activity, SportFilter } from '../types';
 import { sportIcon, sportLabel } from '../core/sports';
 import { formatDuration, formatPace } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
+import { formatActivityDate, type DatePrecision } from '../core/datePrecision';
 
 interface ActivityLogProps {
+  datePrecision?: DatePrecision | null;
   activities: Activity[];
   years: number[];
   year: number | null;
@@ -20,6 +22,7 @@ type DistanceFilter = 'all' | '10' | '20' | '40';
 
 
 export function ActivityLog({
+  datePrecision,
   activities,
   years,
   year,
@@ -47,8 +50,7 @@ export function ActivityLog({
     });
     return filtered.sort(
       (a, b) =>
-        new Date(b.start_date_local).getTime() -
-        new Date(a.start_date_local).getTime()
+        b.start_date_local.localeCompare(a.start_date_local)
     );
   }, [activities, distFilter]);
   const selectedId = selectedActivity?.run_id;
@@ -160,7 +162,9 @@ export function ActivityLog({
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
-              <th className="pb-3 font-medium">{t('date')}</th>
+              <th className="pb-3 font-medium">{datePrecision === 'month'
+                  ? (locale === 'ja' ? '年月' : 'Year / month')
+                  : t('date')}</th>
               <th className="pb-3 font-medium">{t('type')}</th>
               <th className="pb-3 font-medium">{t('name')}</th>
               <th className="pb-3 font-medium">{t('distance')}</th>
@@ -207,7 +211,7 @@ export function ActivityLog({
                 }`}
               >
                 <td className="py-3 text-[var(--color-muted)]">
-                  {a.start_date_local.slice(0, 16).replace('T', ' ')}
+                  {formatActivityDate(a.start_date_local, locale, true)}
                 </td>
                 <td className="py-3">
                   <span className="text-[var(--color-muted)]">

@@ -3,8 +3,10 @@ import type { Activity, SportFilter } from '../types';
 import { formatDistance, parseMovingTime } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
 import { GOALS, DEFAULT_GOAL } from '../config';
+import type { DatePrecision } from '../core/datePrecision';
 
 interface StatsCardsProps {
+  datePrecision?: DatePrecision | null;
   activities: Activity[];
   allActivities: Activity[];
   year: number | null;
@@ -13,6 +15,7 @@ interface StatsCardsProps {
 }
 
 export const StatsCards = memo(function StatsCards({
+  datePrecision,
   activities,
   allActivities,
   year,
@@ -20,6 +23,7 @@ export const StatsCards = memo(function StatsCards({
   onSelectActivity,
 }: StatsCardsProps) {
   const { t, locale } = useLocale();
+  const monthOnly = datePrecision === 'month';
   const goal = GOALS[filter] ?? DEFAULT_GOAL;
   // For Gym, goals are in minutes; for others, goals are in km → convert to meters
   const yearGoalMeters = goal.unit === 'time' ? 0 : goal.yearly * 1000;
@@ -33,8 +37,7 @@ export const StatsCards = memo(function StatsCards({
   const [now] = useState(() => new Date());
   const currentYear = year ?? now.getFullYear();
   const yearActivities = activities.filter((a) => {
-    const d = new Date(a.start_date_local);
-    return d.getFullYear() === currentYear;
+    return Number(a.start_date_local.slice(0, 4)) === currentYear;
   });
   const yearDistance = yearActivities.reduce((s, a) => s + a.distance, 0);
   const yearCount = yearActivities.length;
@@ -73,11 +76,8 @@ export const StatsCards = memo(function StatsCards({
   // Current month stats — always reflects the current calendar month,
   // independent of the year selected for the yearly card (H2 fix).
   const monthActivities = allActivities.filter((a) => {
-    const d = new Date(a.start_date_local);
-    if (
-      d.getFullYear() !== now.getFullYear() ||
-      d.getMonth() !== now.getMonth()
-    )
+    if (a.start_date_local.slice(0, 7) !==
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
       return false;
     if (filter !== 'all' && a.type !== filter) return false;
     return true;
@@ -325,7 +325,9 @@ export const StatsCards = memo(function StatsCards({
   });
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-[1fr_1fr_1fr_1.6fr]">
+    <div className={monthOnly
+      ? 'grid grid-cols-1 gap-4 sm:grid-cols-2'
+      : 'grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-[1fr_1fr_1fr_1.6fr]'}>
       {/* Yearly Goal */}
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/5 hover:shadow-[var(--color-accent)]/5 hover:shadow-lg">
         <p className="mb-2 flex items-center gap-1.5 text-xs tracking-wider text-[var(--color-muted)] uppercase">
@@ -382,7 +384,7 @@ export const StatsCards = memo(function StatsCards({
           </span>
           <span>{formatHours(yearSeconds)}</span>
         </div>
-        <p
+        {!monthOnly && <p
           className={`mt-1.5 text-xs ${yearDiff >= 0 ? 'text-emerald-500' : 'text-red-400'}`}
         >
           {yearDiff >= 0 ? '↗' : '↘'}{' '}
@@ -390,7 +392,7 @@ export const StatsCards = memo(function StatsCards({
             ? formatHours(Math.abs(yearDiff))
             : `${formatDistance(Math.abs(yearDiff))} km`}{' '}
           {t('vsLastYear')}
-        </p>
+        </p>}
       </div>
 
       {/* Monthly Goal */}
@@ -449,7 +451,7 @@ export const StatsCards = memo(function StatsCards({
           </span>
           <span>{formatHours(monthSeconds)}</span>
         </div>
-        <p
+        {!monthOnly && <p
           className={`mt-1.5 text-xs ${monthDiff >= 0 ? 'text-emerald-500' : 'text-red-400'}`}
         >
           {monthDiff >= 0 ? '↗' : '↘'}{' '}
@@ -457,10 +459,11 @@ export const StatsCards = memo(function StatsCards({
             ? formatHours(Math.abs(monthDiff))
             : `${formatDistance(Math.abs(monthDiff))} km`}{' '}
           {t('vsLastMonth')}
-        </p>
+        </p>}
       </div>
 
-      {/* Weekly Goal */}
+      {/* Weekly Goal: requires exact days */}
+      {!monthOnly && (
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/5 hover:shadow-[var(--color-accent)]/5 hover:shadow-lg">
         <p className="mb-2 flex items-center gap-1.5 text-xs tracking-wider text-[var(--color-muted)] uppercase">
           <svg
@@ -523,8 +526,10 @@ export const StatsCards = memo(function StatsCards({
           {locale === 'ja' ? '前週同期比' : 'vs last week'}
         </p>
       </div>
+      )}
 
-      {/* Streak */}
+      {/* Streak: requires exact days */}
+      {!monthOnly && (
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/5 hover:shadow-[var(--color-accent)]/5 hover:shadow-lg">
         <p className="mb-2 flex items-center gap-1.5 text-xs tracking-wider text-[var(--color-muted)] uppercase">
           <svg
@@ -646,6 +651,7 @@ export const StatsCards = memo(function StatsCards({
           {t('weeks')}
         </div>
       </div>
+      )}
     </div>
   );
 });
