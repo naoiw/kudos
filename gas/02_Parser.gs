@@ -300,8 +300,10 @@ function kudosParseGpxFast_(source) {
   };
   const pointPattern = /<(?:[\w.-]+:)?(?:trkpt|rtept)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w.-]+:)?(?:trkpt|rtept)\s*>)/gi;
   const attribute = (attrs, key) => {
-    const m = new RegExp('\\b' + key + '\\s*=\\s*["\\']([^"\\']+)["\\']', 'i').exec(attrs);
-    return m ? kudosNumber_(m[1]) : null;
+    const match = key === 'lat'
+      ? /\blat\s*=\s*['"]([^'"]+)['"]/i.exec(attrs)
+      : /\blon\s*=\s*['"]([^'"]+)['"]/i.exec(attrs);
+    return match ? kudosNumber_(match[1]) : null;
   };
 
   const parsePoints = (text) => {
