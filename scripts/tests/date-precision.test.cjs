@@ -42,3 +42,43 @@ test('month-only dates format without a fabricated day in Japanese and English',
   assert.equal(dates.formatActivityDate('2026-11-14T16:05:00', 'ja', true),
     '2026年11月14日 16:05');
 });
+
+
+test('monthly summary groups by true year and month without inventing days', () => {
+  const source = fs.readFileSync('src/utils/summary.ts', 'utf8');
+  const js = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  vm.runInNewContext(js, {
+    exports,
+    require(module) {
+      if (module === '../hooks/useActivities') {
+        return { parseMovingTime: time => {
+          const parts = time.split(':').map(Number);
+          return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } };
+      }
+      throw new Error('Unexpected dependency: ' + module);
+    },
+  });
+  const activity = (date, distance) => ({
+    start_date_local: date, distance, moving_time: '01:00:00',
+    elevation_gain: 0, average_heartrate: null,
+  });
+  const activities = [
+    activity('2026-11', 1000), activity('2026-11', 2000),
+    activity('2026-12', 3000), activity('2027-01', 4000),
+  ];
+  assert.equal(exports.summaryKey('2026-11', 'month'), '2026-11');
+  assert.equal(exports.summaryKey('2026-11', 'year'), '2026');
+  assert.throws(() => exports.summaryKey('2026-11', 'day'), /exact public dates/);
+  assert.throws(() => exports.summaryKey('2026-11', 'week'), /exact public dates/);
+  const grouped = exports.groupSummary(activities, 'month');
+  assert.deepEqual(Array.from(grouped, ([key, rows]) => [key, rows.length]),
+    [['2027-01', 1], ['2026-12', 1], ['2026-11', 2]]);
+  const chart = exports.summaryChart(activities.slice(0, 3), 'year', '2026');
+  assert.equal(chart.find(row => row.label === '11').km, 3);
+  assert.equal(chart.find(row => row.label === '12').km, 3);
+  assert.equal(exports.summarize(activities).distance, 10000);
+});
