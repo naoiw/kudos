@@ -161,34 +161,38 @@ export function CalendarWidget({
           );
         })}
       </div>
-      {day !== null && dayActivities.length > 0 && (
-        <div className="mt-3 space-y-1 border-t border-[var(--color-border)] pt-3">
-          <p className="mb-2 text-xs text-[var(--color-muted)]">
-            {monthIndex + 1}/{day} ·{' '}
-            {isJapanese ? 'アクティビティを選んで経路を見る' : 'Select an activity to view its route'}
+      {/* Keep this panel the same height when navigating months or selecting days. */}
+      <div className="mt-3 h-24 overflow-y-auto" aria-live="polite">
+        {day !== null && dayActivities.length > 0 ? (
+          <div className="space-y-1 border-t border-[var(--color-border)] pt-3">
+            <p className="mb-2 text-xs text-[var(--color-muted)]">
+              {monthIndex + 1}/{day} ·{' '}
+              {isJapanese ? 'アクティビティを選んで経路を見る' : 'Select an activity to view its route'}
+            </p>
+            {dayActivities.map((activity) => (
+              <button
+                key={activity.run_id}
+                aria-pressed={selectedActivity?.run_id === activity.run_id}
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-[var(--color-bg)] aria-pressed:bg-[var(--color-accent)]/10"
+                onClick={() => onSelectActivity(activity)}
+              >
+                <span className="min-w-0 truncate">
+                  {activity.start_date_local.slice(11, 16)} · {activity.name}
+                </span>
+                <span className="shrink-0 font-mono">
+                  {(activity.distance / 1000).toFixed(1)} km
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="flex h-full items-center justify-center text-center text-xs text-[var(--color-muted)]">
+            {!monthActivities.length
+              ? (isJapanese ? 'この月のアクティビティはありません' : 'No activities this month')
+              : (isJapanese ? '活動日を選択すると詳細を表示します' : 'Select an active day to view details')}
           </p>
-          {dayActivities.map((activity) => (
-            <button
-              key={activity.run_id}
-              aria-pressed={selectedActivity?.run_id === activity.run_id}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-[var(--color-bg)] aria-pressed:bg-[var(--color-accent)]/10"
-              onClick={() => onSelectActivity(activity)}
-            >
-              <span className="min-w-0 truncate">
-                {activity.start_date_local.slice(11, 16)} · {activity.name}
-              </span>
-              <span className="shrink-0 font-mono">
-                {(activity.distance / 1000).toFixed(1)} km
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-      {!monthActivities.length && (
-        <p className="mt-3 text-center text-xs text-[var(--color-muted)]">
-          {isJapanese ? 'この月のアクティビティはありません' : 'No activities this month'}
-        </p>
-      )}
+        )}
+      </div>
     </section>
   );
 }
