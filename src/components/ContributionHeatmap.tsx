@@ -10,14 +10,13 @@ import {
 } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
 
-const MAX_VISIBLE_YEARS = 10;
 // One week column: h-3/w-3 cell (12px) + gap-[3px]
 const HEATMAP_WEEK_WIDTH = 15;
 const weekdayIds = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 interface HeatmapProps {
   activities: Activity[];
-  year: number;
+  year: number | null;
   filter: SportFilter;
   onSelectActivity?: (a: Activity | null) => void;
 }
@@ -204,36 +203,18 @@ function buildYearGrid(
 
 export const ContributionHeatmap = memo(function ContributionHeatmap({
   activities,
-  year: defaultYear,
+  year,
   filter,
   onSelectActivity,
 }: HeatmapProps) {
   const { t, locale } = useLocale();
   const allYears = useMemo(() => getAvailableYears(activities), [activities]);
-  const [selectedYear, setSelectedYear] = useState<number | 'all'>(defaultYear);
-  const [previousDefaultYear, setPreviousDefaultYear] = useState(defaultYear);
-  // yearWindowEnd: index into allYears of the last visible year (0-based, most-recent-first)
-  const [yearWindowEnd, setYearWindowEnd] = useState(
-    Math.min(MAX_VISIBLE_YEARS - 1, allYears.length - 1)
-  );
+  const selectedYear = year ?? 'all';
   const captureRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
   const [exportUrl, setExportUrl] = useState('');
   const [dayActivities, setDayActivities] = useState<Activity[]>([]);
-
-  if (previousDefaultYear !== defaultYear) {
-    setPreviousDefaultYear(defaultYear);
-    setSelectedYear(defaultYear);
-    setDayActivities([]);
-    setExportUrl('');
-    setExportMessage('');
-    const index = allYears.indexOf(defaultYear);
-    if (index >= 0)
-      setYearWindowEnd(
-        Math.min(allYears.length - 1, Math.max(MAX_VISIBLE_YEARS - 1, index))
-      );
-  }
 
   const isGym = false;
   const isAll = filter === 'all';
@@ -301,25 +282,6 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
         : 'Walking Heatmap'
       : t('heatmapTitle');
 
-  const handleSelectYear = (yr: number | 'all') => {
-    setExportUrl('');
-    setExportMessage('');
-    setSelectedYear(yr);
-    setDayActivities([]);
-  };
-
-  // Visible year window
-  const yearWindowStart = Math.max(0, yearWindowEnd - MAX_VISIBLE_YEARS + 1);
-  const visibleYears = allYears.slice(yearWindowStart, yearWindowEnd + 1);
-  const canScrollLeft = yearWindowStart > 0;
-  const canScrollRight = yearWindowEnd < allYears.length - 1;
-
-  const shiftWindow = (dir: -1 | 1) => {
-    setYearWindowEnd((prev) =>
-      Math.min(Math.max(prev + dir, MAX_VISIBLE_YEARS - 1), allYears.length - 1)
-    );
-  };
-
   const handleExport = async () => {
     if (!captureRef.current || exporting) return;
     setExporting(true);
@@ -384,87 +346,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{heatmapTitle}</h2>
         <div className="flex flex-wrap items-center gap-1.5">
-          {/* ALL button */}
-          <button
-            aria-pressed={selectedYear === 'all'}
-            onClick={() => handleSelectYear('all')}
-            className={`rounded px-2.5 py-1 text-xs font-medium ${
-              selectedYear === 'all'
-                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
-                : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
-            }`}
-          >
-            {locale === 'ja' ? 'すべて' : 'ALL'}
-          </button>
-
-          <span className="h-3 w-px bg-[var(--color-border)]" />
-
-          {/* Left arrow */}
-          <button
-            aria-label={
-              locale === 'ja' ? '新しい年を見る' : 'Newer heatmap years'
-            }
-            onClick={() => shiftWindow(-1)}
-            disabled={!canScrollLeft}
-            className="flex h-5 w-5 items-center justify-center rounded text-[var(--color-muted)] transition-all hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-20"
-          >
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-
-          {/* Visible year buttons */}
-          {visibleYears.map((y) => (
-            <button
-              key={y}
-              aria-pressed={selectedYear === y}
-              onClick={() => handleSelectYear(y)}
-              className={`rounded px-2.5 py-1 text-xs font-medium ${
-                selectedYear === y
-                  ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
-                  : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
-              }`}
-            >
-              {y}
-            </button>
-          ))}
-
-          {/* Right arrow */}
-          <button
-            aria-label={
-              locale === 'ja' ? '古い年を見る' : 'Older heatmap years'
-            }
-            onClick={() => shiftWindow(1)}
-            disabled={!canScrollRight}
-            className="flex h-5 w-5 items-center justify-center rounded text-[var(--color-muted)] transition-all hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-20"
-          >
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-
-          <span className="h-3 w-px bg-[var(--color-border)]" />
-
+          {/* Year selection is shared with the rest of the dashboard. */}
           {/* Export button */}
           <button
             onClick={handleExport}

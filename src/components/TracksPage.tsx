@@ -3,18 +3,15 @@ import { exportCard } from '../utils/exportCard';
 import { RouteMap } from './RouteMap';
 import * as polyline from '@mapbox/polyline';
 import type { Activity } from '../types';
-import { SPORT_ORDER, SPORT_DETAILS, sportColor } from '../core/sports';
-import type { Sport } from '../core/sports';
+import { sportColor } from '../core/sports';
 import {
-  getAvailableYears,
   formatDistance,
   parseMovingTime,
   formatPace,
 } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
-import { formatActivityDate, activityYear } from '../core/datePrecision';
+import { formatActivityDate } from '../core/datePrecision';
 
-type SportType = Sport;
 const trackPlaceholders = Array.from({ length: 40 }, (_, id) => ({
   id,
   delay: id * 20,
@@ -22,6 +19,7 @@ const trackPlaceholders = Array.from({ length: 40 }, (_, id) => ({
 
 interface TracksPageProps {
   activities: Activity[];
+  year: number | null;
   filter: string;
   dark?: boolean;
   onBack: () => void;
@@ -113,14 +111,14 @@ function getColor(a: Activity): string {
 
 export function TracksPage({
   activities,
+  year,
+  filter,
   onBack,
   dark,
   onSelectActivity,
 }: TracksPageProps) {
   const { locale } = useLocale();
-  const allYears = useMemo(() => getAvailableYears(activities), [activities]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [sportFilter, setSportFilter] = useState<SportType | null>(null);
+  const selectedYear = year;
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
   );
@@ -133,32 +131,8 @@ export function TracksPage({
   const [exportUrl, setExportUrl] = useState('');
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Year pagination
-  const MAX_YEARS = 10;
-  const [yearPage, setYearPage] = useState(0);
-  const totalYearPages = Math.ceil(allYears.length / MAX_YEARS);
-  const visibleYears = allYears.slice(
-    yearPage * MAX_YEARS,
-    yearPage * MAX_YEARS + MAX_YEARS
-  );
-
-  // Determine which sport types exist
-  const hasSport = (t: SportType) => activities.some((a) => a.type === t);
-
-  // Filtered base (year + sport)
-  const base = useMemo(
-    () =>
-      activities.filter((a) => {
-        if (
-          selectedYear !== null &&
-          activityYear(a.start_date_local) !== selectedYear
-        )
-          return false;
-        if (sportFilter !== null && a.type !== sportFilter) return false;
-        return true;
-      }),
-    [activities, selectedYear, sportFilter]
-  );
+  // Activity scope is already filtered by the shared year and sport controls.
+  const base = activities;
 
   const withPolyline = useMemo(
     () =>
@@ -263,12 +237,6 @@ export function TracksPage({
     : 0;
   const selectedDurationLabel = `${Math.floor(selectedSeconds / 3600) ? Math.floor(selectedSeconds / 3600) + 'h ' : ''}${Math.floor((selectedSeconds % 3600) / 60)}m`;
 
-  const allSportTabs: { label: string; value: SportType; color: string }[] =
-    SPORT_ORDER.map((sport) => ({
-      value: sport,
-      label: SPORT_DETAILS[sport][locale],
-      color: SPORT_DETAILS[sport].color,
-    }));
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
@@ -472,96 +440,9 @@ export function TracksPage({
             ref={captureRef}
             className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4"
           >
-            {/* Year pills + sport filter */}
-            <div className="mb-4 flex flex-wrap items-center gap-1.5 border-b border-[var(--color-border)] pb-3">
-              {totalYearPages > 1 && (
-                <button
-                  aria-label={locale === 'ja' ? '新しい年を見る' : 'Newer years'}
-                  onClick={() => setYearPage((p) => Math.max(0, p - 1))}
-                  disabled={yearPage === 0}
-                  className="px-1 text-base leading-none text-[var(--color-muted)] transition-colors hover:text-[var(--color-text)] disabled:opacity-30"
-                >
-                  ‹
-                </button>
-              )}
-              <button
-                aria-pressed={selectedYear === null}
-                onClick={() => {
-                  setExportUrl('');
-                  setExportMessage('');
-                  setSelectedYear(null);
-                  setSelectedActivity(null);
-                  onSelectActivity?.(null);
-                }}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${selectedYear === null ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-              >
-                {locale === 'ja' ? 'すべて' : 'All'}
-              </button>
-              {visibleYears.map((yr) => (
-                <button
-                  key={yr}
-                  aria-pressed={selectedYear === yr}
-                  onClick={() => {
-                    setExportUrl('');
-                    setExportMessage('');
-                    setSelectedYear(yr);
-                    setSelectedActivity(null);
-                    onSelectActivity?.(null);
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${selectedYear === yr ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-                >
-                  {yr}
-                </button>
-              ))}
-              {totalYearPages > 1 && (
-                <button
-                  onClick={() =>
-                    setYearPage((p) => Math.min(totalYearPages - 1, p + 1))
-                  }
-                  aria-label={locale === 'ja' ? '古い年を見る' : 'Older years'}
-                  disabled={yearPage === totalYearPages - 1}
-                  className="px-1 text-base leading-none text-[var(--color-muted)] transition-colors hover:text-[var(--color-text)] disabled:opacity-30"
-                >
-                  ›
-                </button>
-              )}
-              {/* Sport filter — right side */}
-              <div className="ml-auto flex items-center gap-1.5">
-                <button
-                  aria-pressed={sportFilter === null}
-                  onClick={() => {
-                    setExportUrl('');
-                    setExportMessage('');
-                    setSportFilter(null);
-                    setSelectedActivity(null);
-                    onSelectActivity?.(null);
-                  }}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${sportFilter === null ? 'border-transparent bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-                >
-                  {locale === 'ja' ? 'すべて' : 'All'}
-                </button>
-                {allSportTabs
-                  .filter((t) => hasSport(t.value))
-                  .map(({ label, value, color }) => (
-                    <button
-                      key={value}
-                      aria-pressed={sportFilter === value}
-                      onClick={() => {
-                        setExportUrl('');
-                        setExportMessage('');
-                        setSportFilter(value);
-                        setSelectedActivity(null);
-                        onSelectActivity?.(null);
-                      }}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${sportFilter === value ? 'border-transparent text-white' : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
-                      style={
-                        sportFilter === value ? { backgroundColor: color } : {}
-                      }
-                    >
-                      {label}
-                    </button>
-                  ))}
-                <span className="mx-1 h-3 w-px bg-[var(--color-border)]" />
+            {/* Shared year/sport selection lives above the page. */}
+            <div className="mb-4 flex flex-wrap items-center justify-end gap-1.5 border-b border-[var(--color-border)] pb-3">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={async () => {
                     if (!captureRef.current || exporting) return;
@@ -681,7 +562,7 @@ export function TracksPage({
             {/* Legend + sort */}
             {!clustering && clusteredTracks.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-muted)]">
-                {sportFilter === null || sportFilter === 'Walk' ? (
+                {filter === 'all' || filter === 'Walk' ? (
                   <>
                     <span className="flex items-center gap-1.5">
                       <span className="inline-block h-0.5 w-3 rounded bg-[#f97316]" />
