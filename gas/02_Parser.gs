@@ -34,7 +34,9 @@ function kudosTimestamp_(raw) {
 }
 
 function kudosNumber_(text) {
-  const value = Number(kudosText_(text));
+  const input = kudosText_(text);
+  if (input === '') return null;
+  const value = Number(input);
   return Number.isFinite(value) ? value : null;
 }
 
