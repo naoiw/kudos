@@ -218,7 +218,7 @@ function kudosReadPreviewRoutes_(activities, userIds) {
 
     try {
       const file = DriveApp.getFileById(fileId);
-      const xml = file.getBlob().getDataAsString('UTF-8').replace(/^\\uFEFF/, '');
+      const xml = file.getBlob().getDataAsString('UTF-8').replace(/^\uFEFF/, '');
       const root = XmlService.parse(xml).getRootElement();
       const name = root.getName().toLowerCase();
       const input = name === 'gpx' ? kudosParseGpx_(root)

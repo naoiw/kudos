@@ -8,7 +8,7 @@ const MapCanvas = lazy(() =>
   }))
 );
 
-/** Load WebGL and decode routes only as the map approaches the viewport. */
+/** Lazily load the Leaflet map when it approaches the viewport. */
 export function RouteMap(props: RouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);

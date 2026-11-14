@@ -1,6 +1,6 @@
 # Kudos — Google Apps Script ingestion
 
-このディレクトリには、管理者所有の **Google Drive → Google Sheets** GPX/TCX取り込み基盤があります。公開中の `naoiw.github.io/kudos` へは、管理者が明示的に許可した統計プレビューだけを手動で公開できます。**GPS経路・個人情報は書き出しません。初期状態では公開禁止です。**
+このディレクトリには、管理者所有の **Google Drive → Google Sheets** GPX/TCX取り込み基盤があります。公開中の `naoiw.github.io/kudos` へは、手動でユーザー名・アクティビティ・GPX/TCX経路を出力できます。**公開リポジトリのため、書き出したGPS経路と表示名は誰でも閲覧可能です。** 現状のデータがテスト用であることを確認して実行してください。
 
 ## 全体設計
 
@@ -27,8 +27,8 @@ Private Google Sheets (owner only)
 - ファイル名は自由です。GPX/TCXのXMLルート要素から形式を判定します。
 - 誰の活動かは、ファイル内の氏名やファイル名ではなく **フォルダID** から判定します。
 - 管理シートは **1ファイルのみ**。ユーザーごとに `user_id` を付けて行を分けます。
-- 生のGPX/TCXとGPS座標の配列はDriveに保持。シートには統計と管理メタデータだけを保存します。
-- ルートを表示するための公開用JSON生成は未実装です。認証・公開範囲・経路マスキングが確定するまでデータ公開を行わないでください。
+- 生のGPX/TCXはDriveに保持し、シートには統計と管理メタデータを保存します。
+- 手動公開時はDriveの元GPX/TCXから経路座標を再取得し、表示用のGoogle encoded polylineに変換してJSONに含めます。
 
 ## 1. 管理シートの準備
 
@@ -109,28 +109,27 @@ Apps Scriptは1回あたりの実行時間に上限があります。既定で�
 
 1. データはすべて**管理者用の非公開Sheets**に入ります。GPS生データを公開リポジトリへ入れないでください。
 2. 移動距離・移動時間・獲得標高はGPX/TCXの地点から計算する暫定値で、Garmin/Strava側の補正結果と多少異なる場合があります。
-3. `location_country` 相当の都道府県自動判別とGPS公開経路加工は今後対応します。特に家の周辺の経路は別途マスキングが必要です。
+3. `location_country` 相当の都道府県自動判別は今後対応します。現在の経路出力は起終点を含み、マスキングしません。
 4. 既存の活動ファイルをDriveから削除しても、Activitiesの行は自動では削除しません。管理者が履歴と対応を確認して整理してください。
 5. `Users` の `enabled` をFALSEにすると新規取り込みが停止します。既存のActivitiesを削除する処理ではありません。
 
 ## Security / privacy
 
-No Google Drive IDs, user emails, access tokens, raw GPX data or route coordinates are committed to the repository. Public GitHub Pages still serves synthetic demo data. Real activity publishing requires an authenticated, privacy-reviewed export flow that is outside this phase.
+Do not commit Google Drive IDs, email addresses, or tokens. Exported preview.json intentionally contains encoded GPS coordinates and display names after an explicit manual publish. The repository is currently public, so do not publish private routes.
 
 
-## 7. ウェブ画面へ統計プレビューを反映する（手動・公開許可制）
+## 7. ウェブ画面へ名前・活動・GPS経路を反映する（手動エクスポート）
 
-**最重要：`naoiw/kudos` のGitHub Pagesは誰でも閲覧できます。** この操作は非公開Sheetsから統計を抽出して、公開リポジトリの `public/data/preview.json` へ**コミット**します。承認した情報はログインなしで誰でも参照できます。公開前提のテスト記録だけで利用してください。実際のプライベートな活動データは認証対応後まで公開しないでください。
+**現状の `naoiw/kudos` はPublicリポジトリです。** この操作はGoogle Sheetsの表示名・活動情報、およびDriveのGPX/TCXを変換したGPS経路を `public/data/preview.json` にコミットします。**このファイルと経路は誰でも閲覧できます。** 今はテスト用GPXで動作確認し、実際の非公開データについてはPrivateリポジトリや認証対応を先に実施してください。
 
 ### 7-1. 更新ファイル
 
 既にGASをセットアップした場合、追加・更新するのは次のファイルです。
 
-- **追加**：`gas/05_PublicPreview.gs`
-- **更新**：`gas/00_Config.gs`（公開承認用の設定項目を追加）
-- **更新**：`gas/appsscript.json`（`script.external_request` 権限を追加）
+- **更新**：`gas/05_PublicPreview.gs`（元GPX/TCXからの経路抽出・display_name反映）
+- `gas/appsscript.json` は既に `script.external_request` を含んでおり、今回は変更不要です。
 
-GASエディターへ反映したあと **`setupSheets()` をもう一度実行** してください。既存のUsers・Activities・ImportLogは消えず、Settingsに新しい設定行が追加されます。
+GASエディターで `05_PublicPreview.gs` を最新版に置き換えてください。**シート列の変更はないため、`setupSheets()` の再実行は不要です。**
 
 ### 7-2. 明示的に公開を承認する
 
@@ -143,11 +142,11 @@ GASエディターへ反映したあと **`setupSheets()` をもう一度実行*
 | `public_preview_date_precision` | `month` | 原則 `month` のまま。各活動の正確な日時を架空の日に置き換える |
 | `public_preview_exact_dates_approval` | `disabled` | `exact` を選ぶ場合だけ別途 `I_APPROVE_EXACT_DATES` が必要 |
 
-**重要**：`month` でも活動した**年月**・距離・運動時間・獲得標高・種目は公開されます。完全に匿名ではありません。日付を完全な架空データにしたい場合は、そもそもシートの元データをダミーにしてください。
+**重要**：`month` は日付を架空の日へ置き換えるだけで、GPS経路は含みます。GPSを表示する場合、地図から地域を特定できるため、この設定は匿名化の保証ではありません。
 
-公開用データから必ず除外する項目：ユーザーの実名・メール・DriveフォルダID・ファイル名・ファイルID・ハッシュ・GPX内の活動名・心拍数・GPS座標・エンコード済み経路・都道府県。
+サイトのユーザー名は **`Users.display_name`** を使用し、アクティビティ名も `Activities.name_override` または `Activities.name` を反映します。ユーザーIDは従来通り `u01`、`u02` などの表示用別IDを使用します。`Run` / `Ride` として確定した活動だけを対象にします。
 
-公開ユーザーは `u01`、`u02` といった別IDで表示し、表示名も「ユーザー 1」「ユーザー 2」に置換します。`Run` / `Ride` として確定した活動だけを表示します。`review_status=needs_review` の活動は公開しません。
+GPS経路は `Activities.drive_file_id` に紐づくDriveのGPX/TCXを再解析して生成し、複数トラックセグメントは別々に保持します。欠けたDriveファイルや無効な経路がある場合は、エクスポートがエラーを返します。Sheets自体へのGPX座標の追加は不要です。
 
 ### 7-3. GitHubへの接続
 
@@ -161,16 +160,16 @@ Apps Scriptのプロジェクト設定にある **スクリプト プロパテ�
 
 ### 7-4. 実行手順
 
-1. `Settings` で承認項目・公開ユーザーを設定する。
+1. `Settings` で対象ユーザーを設定する（従来の `public_preview_export_approval` などを利用します）。
 2. Apps Scriptの関数一覧から **`inspectApprovedPublicPreview()`** を実行し、件数や日付公開方法を確認する。
 3. 内容に問題がなければ **`publishApprovedPublicPreview()`** を手動実行する。
 4. <https://github.com/naoiw/kudos/blob/main/public/data/preview.json> で公開データの内容を確認する。
 5. GitHub ActionsのPagesデプロイ完了後、<https://naoiw.github.io/kudos/> でユーザー切り替えと集計を確認する。
 
-公開用JSONが未作成・未公開のときは、サイトはこれまでの架空サンプル表示へ戻ります。現段階のルートマップ・足跡マップには実際のGPS経路が表示されません（座標を出力しないためです）。
+公開用JSONが未作成・未公開のときは、サイトはこれまでの架空サンプル表示へ戻ります。経路が含まれるアクティビティは**ルートマップに表示されます**。足跡マップの都道府県集計は引き続き `prefecture_override` の値に依存します。
 
-既存の同期トリガーは**公開処理を呼び出しません**。新しいGPXを取り込んで表示を更新したいときは、`publishApprovedPublicPreview()` をもう一度実行してください。自動化は公開手順・公開許可を確認できたあとに追加します。
+既存の同期トリガーは**エクスポートを呼び出しません**。新しいGPXを取り込んで表示を更新したいときは、`publishApprovedPublicPreview()` をもう一度実行してください。
 
 ### 7-5. 公開を止める
 
-`Settings.public_preview_export_approval` を `disabled` に戻すだけでは、**既にGitHubへ公開したJSONは消えません**。公開を終了する場合は、`public/data/preview.json` を無効化したダミーJSONへ置き換え、GitHub Pagesの再デプロイを確認してください。過去にコミットした情報はGit履歴に残り得るため、実際の私的情報を公開しないことが最重要です。
+`Settings.public_preview_export_approval` を `disabled` に戻すだけでは、**既にGitHubへ公開したJSONは消えません**。公開を終了する場合は、`public/data/preview.json` を無効化したダミーJSONへ置き換え、GitHub Pagesの再デプロイを確認してください。過去にコミットしたGPS経路や表示名はGit履歴に残り得るため、将来リポジトリをPrivateに切り替える場合もそれ以前の公開状態を考慮してください。
