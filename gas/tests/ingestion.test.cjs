@@ -575,7 +575,7 @@ test('fast GPX parser reads track segments without XmlService object creation', 
 test('GPX fast path preserves separate tracks and supports single quotes', () => {
   const { evaluate } = createFixture();
   const xml = '<gpx><trk><name>Two legs</name>' +
-    '<trkseg><trkpt lat=\\'35.0\\' lon=\\'139.0\\'/><trkpt lat=\\'35.001\\' lon=\\'139.001\\'/></trkseg>' +
+    `<trkseg><trkpt lat='35.0' lon='139.0'/><trkpt lat='35.001' lon='139.001'/></trkseg>` +
     '<trkseg><trkpt lat="36.0" lon="140.0"/><trkpt lat="36.001" lon="140.001"/></trkseg>' +
     '</trk></gpx>';
   const input = evaluate('kudosParseGpxFast_(_xml)', { _xml: xml });
