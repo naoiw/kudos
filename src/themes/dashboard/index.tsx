@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useLocale } from '@/hooks/useLocale';
 import { Header } from '@/components/Header';
 import { StatsCards } from '@/components/StatsCards';
+import { GoalSettings } from '@/components/GoalSettings';
 import { ContributionHeatmap } from '@/components/ContributionHeatmap';
 import { ActivityLog } from '@/components/ActivityLog';
 import { RouteMap } from '@/components/RouteMap';
@@ -27,6 +28,13 @@ import { JapanMap } from '@/components/JapanMap';
 import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { activityYear } from '@/core/datePrecision';
+import {
+  defaultSportGoals,
+  loadSportGoals,
+  resetSportGoals,
+  saveSportGoals,
+  type SportGoals,
+} from '@/core/goals';
 
 const TracksPage = lazy(() =>
   import('@/components/TracksPage').then((module) => ({
@@ -76,6 +84,30 @@ function Dashboard() {
     null
   );
   const [page, setPage] = useState<Page>(pageFromPath);
+  const [editingGoals, setEditingGoals] = useState(false);
+  const [goalsByUser, setGoalsByUser] = useState<Record<string, SportGoals>>(
+    () => Object.fromEntries(
+      catalog.users.map(user => [user.user_id, loadSportGoals(user.user_id)])
+    )
+  );
+  const sportGoals = goalsByUser[currentUser.user_id] ?? defaultSportGoals();
+
+  const saveCurrentUserGoals = (goals: SportGoals): boolean => {
+    if (!saveSportGoals(currentUser.user_id, goals)) return false;
+    setGoalsByUser(previous => ({
+      ...previous,
+      [currentUser.user_id]: goals,
+    }));
+    return true;
+  };
+  const resetCurrentUserGoals = (): boolean => {
+    if (!resetSportGoals(currentUser.user_id)) return false;
+    setGoalsByUser(previous => ({
+      ...previous,
+      [currentUser.user_id]: defaultSportGoals(),
+    }));
+    return true;
+  };
 
   useEffect(() => {
     const onPopState = () => setPage(pageFromPath());
@@ -182,7 +214,26 @@ function Dashboard() {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          aria-expanded={editingGoals}
+          onClick={() => setEditingGoals(value => !value)}
+          className="ml-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-1.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
+        >
+          {editingGoals ? '目標設定を閉じる' : '目標設定'}
+        </button>
       </div>
+      {editingGoals && (
+        <div className="px-4 sm:px-6">
+          <GoalSettings
+            key={currentUser.user_id}
+            goals={sportGoals}
+            onSave={saveCurrentUserGoals}
+            onReset={resetCurrentUserGoals}
+            onClose={() => setEditingGoals(false)}
+          />
+        </div>
+      )}
 
       <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
         {catalog.mode === 'public-preview'
@@ -226,6 +277,7 @@ function Dashboard() {
               {/* Left column */}
               <div className="min-w-0 space-y-6 overflow-hidden">
                 <StatsCards
+                  goals={sportGoals}
                   datePrecision={catalog.datePrecision}
                   activities={filtered}
                   allActivities={activities}
