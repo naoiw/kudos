@@ -147,6 +147,7 @@ function kudosBuildPublicPreview_(users, activities, allowlist, precision, now, 
   });
   return {
     schema_version: 1,
+    genre_version: 1,
     mode: 'public-stats-preview',
     generated_at: now,
     date_precision: precision,
