@@ -116,9 +116,21 @@ function syncAllActivities() {
         break;
       }
       stats.users_scanned++;
+      const cursorKey = 'KUDOS_SYNC_CURSOR_' + user.user_id;
       let files;
       try {
-        files = DriveApp.getFolderById(user.drive_folder_id).getFiles();
+        const continuation = props.getProperty(cursorKey);
+        if (continuation) {
+          try {
+            files = DriveApp.continueFileIterator(continuation);
+          } catch (expired) {
+            // Drive continuation tokens expire; fall back to a safe full scan.
+            props.deleteProperty(cursorKey);
+            files = DriveApp.getFolderById(user.drive_folder_id).getFiles();
+          }
+        } else {
+          files = DriveApp.getFolderById(user.drive_folder_id).getFiles();
+        }
       } catch (error) {
         stats.files_error++;
         notes.push(user.user_id + ': folder unavailable (' + String(error).slice(0, 150) + ')');
@@ -201,7 +213,8 @@ function syncAllActivities() {
 
             const newActivity = {
               activity_id: activityId, drive_file_id: fileId, user_id: user.user_id,
-              source_hash: digest, _row: activitySheet.getLastRow(),
+              source_hash: digest,
+              _row: previousActivity ? previousActivity._row : activitySheet.getLastRow(),
             };
             activityIndex.set(key, newActivity);
             contentIndex.set(kudosDigestKey_(user.user_id, digest), newActivity);
@@ -221,6 +234,19 @@ function syncAllActivities() {
         importIndex.set(key, Object.assign({}, base, {
           _row: writeIndex || importSheet.getLastRow(),
         }));
+        // Checkpoint after each file, so a manually repeated sync resumes
+        // without rescanning all files at the front of a large folder.
+        if (typeof files.getContinuationToken === 'function') {
+          props.setProperty(cursorKey, files.getContinuationToken());
+        }
+      }
+      if (outOfBudget) {
+        if (typeof files.getContinuationToken === 'function') {
+          props.setProperty(cursorKey, files.getContinuationToken());
+        }
+      } else {
+        // A full scan completed; next run starts over to detect new/edited GPX.
+        props.deleteProperty(cursorKey);
       }
     }
 
@@ -252,6 +278,47 @@ function syncAllActivities() {
     }
     lock.releaseLock();
   }
+  return stats;
+}
+
+/**
+ * Manual batch import; never creates a schedule or time-based trigger.
+ * Run repeatedly until new files stop appearing in the ImportLog and
+ * the SyncLog no longer says "Paused at the runtime/file budget".
+ */
+function importNextManualBatch() {
+  const result = syncAllActivities();
+  Logger.log(JSON.stringify({
+    imported: result ? result.files_imported : 0,
+    duplicates: result ? result.files_duplicate : 0,
+    failed: result ? result.files_error : 0,
+    paused: Boolean(result && result.notes.includes('Paused')),
+  }));
+  return result;
+}
+
+function showImportProgress() {
+  const ss = kudosOpenSpreadsheet_();
+  kudosEnsureSheets_(ss);
+  const rows = kudosReadObjects_(ss.getSheetByName('ImportLog'), KUDOS_SHEETS.ImportLog);
+  const users = kudosValidateUsers_(
+    kudosReadObjects_(ss.getSheetByName('Users'), KUDOS_SHEETS.Users)
+  );
+  const counts = {};
+  for (const user of users) {
+    counts[user.user_id] = { imported: 0, duplicate: 0, error: 0, other: 0 };
+  }
+  for (const row of rows) {
+    const bucket = counts[kudosText_(row.user_id)];
+    if (!bucket) continue;
+    const status = kudosText_(row.status);
+    if (status === 'imported') bucket.imported++;
+    else if (status === 'duplicate') bucket.duplicate++;
+    else if (status === 'error') bucket.error++;
+    else bucket.other++;
+  }
+  Logger.log(JSON.stringify(counts));
+  return counts;
 }
 
 /** Print user ID and import summary without logging private GPS coordinates. */

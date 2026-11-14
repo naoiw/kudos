@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as polyline from '@mapbox/polyline';
 import type { Activity } from '../types';
 import { hasRoute, routeForActivity } from '../core/routeFallback';
+import { activityPointsInPrefecture, prefectureBounds } from '../core/prefectureRoutes';
 import { useLocale } from '../hooks/useLocale';
 import './RouteMap.css';
 
@@ -9,6 +10,7 @@ export interface RouteMapProps {
   activities: Activity[];
   allActivities?: Activity[];
   selectedActivity?: Activity | null;
+  focusedPrefecture?: string | null;
   dark?: boolean;
   onClearSelection?: () => void;
 }
@@ -124,6 +126,7 @@ export function RouteMapCanvas({
   activities,
   allActivities = activities,
   selectedActivity,
+  focusedPrefecture = null,
   dark = false,
   onClearSelection,
 }: RouteMapProps) {
@@ -163,13 +166,34 @@ export function RouteMapCanvas({
 
   const fitRoutes = useCallback(() => {
     const map = mapRef.current;
-    if (!map || boundsRef.current.length === 0) return;
+    if (!map) return;
+
+    if (focusedPrefecture && !selectedActivity) {
+      const selectedPoints = activityPointsInPrefecture(activities, focusedPrefecture);
+      const regionBounds = prefectureBounds(focusedPrefecture);
+      // Focus on the actual portion of routes inside the prefecture when possible.
+      const focus = selectedPoints.length
+        ? selectedPoints
+        : regionBounds
+          ? regionBounds
+          : [];
+      if (focus.length) {
+        map.fitBounds(focus, {
+          padding: [35, 35],
+          maxZoom: 12,
+          animate: false,
+        });
+        return;
+      }
+    }
+
+    if (boundsRef.current.length === 0) return;
     map.fitBounds(boundsRef.current, {
       padding: [30, 30],
       maxZoom: selectedActivity ? 16 : 13,
       animate: false,
     });
-  }, [selectedActivity]);
+  }, [activities, focusedPrefecture, selectedActivity]);
 
   useEffect(() => {
     let cancelled = false;
@@ -243,10 +267,12 @@ export function RouteMapCanvas({
 
     if (points.length) {
       fitRoutes();
+    } else if (focusedPrefecture) {
+      fitRoutes();
     } else {
       map.setView(MAP_CENTER, 10);
     }
-  }, [routes, mapReady, selectedActivity, fitRoutes]);
+  }, [routes, mapReady, selectedActivity, focusedPrefecture, fitRoutes]);
 
   useEffect(() => {
     const onFullscreenChange = () => {

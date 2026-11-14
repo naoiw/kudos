@@ -218,12 +218,9 @@ function kudosReadPreviewRoutes_(activities, userIds) {
 
     try {
       const file = DriveApp.getFileById(fileId);
-      const xml = file.getBlob().getDataAsString('UTF-8').replace(/^\uFEFF/, '');
-      const root = XmlService.parse(xml).getRootElement();
-      const name = root.getName().toLowerCase();
-      const input = name === 'gpx' ? kudosParseGpx_(root)
-        : name === 'trainingcenterdatabase' ? kudosParseTcx_(root) : null;
-      if (!input) throw new Error('Unsupported GPX/TCX format');
+      const xml = file.getBlob().getDataAsString('UTF-8');
+      // Reuse the fast GPX reader, avoiding the XmlService bottleneck on export.
+      const input = kudosParseGpsSource_(xml);
       const encoded = kudosEncodeRouteSegments_(input.segments);
       if (!encoded.length) throw new Error('File has no drawable GPS track');
       routes.set(key, encoded);

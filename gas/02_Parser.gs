@@ -278,21 +278,99 @@ function kudosAnalyzeSegments_(input, settings) {
   };
 }
 
-function kudosParseActivity_(xmlText, settings) {
+/**
+ * Fast-path for ordinary GPX trackpoints. XmlService can take minutes to build
+ * an object tree for multi-megabyte Garmin recordings; this reader extracts
+ * only the tiny subset of data that Kudos needs.
+ *
+ * Invalid/unusual GPX falls back to XmlService in kudosParseActivity_.
+ */
+function kudosParseGpxFast_(source) {
+  const xml = String(source).replace(/^\uFEFF/, '');
+  if (!/<(?:[\w.-]+:)?gpx(?:\s|>)/i.test(xml.slice(0, 3000))) return null;
+
+  const tagText = (part, tag) => {
+    const pattern = new RegExp(
+      '<(?:[\\w.-]+:)?' + tag + '\\b[^>]*>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?' +
+        tag + '\\s*>',
+      'i'
+    );
+    const match = pattern.exec(part);
+    return match ? match[1].replace(/<[^>]+>/g, '').trim() : '';
+  };
+  const pointPattern = /<(?:[\w.-]+:)?(?:trkpt|rtept)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w.-]+:)?(?:trkpt|rtept)\s*>)/gi;
+  const attribute = (attrs, key) => {
+    const match = key === 'lat'
+      ? /\blat\s*=\s*['"]([^'"]+)['"]/i.exec(attrs)
+      : /\blon\s*=\s*['"]([^'"]+)['"]/i.exec(attrs);
+    return match ? kudosNumber_(match[1]) : null;
+  };
+
+  const parsePoints = (text) => {
+    const result = [];
+    pointPattern.lastIndex = 0;
+    let match;
+    while ((match = pointPattern.exec(text)) !== null) {
+      const lat = attribute(match[1], 'lat');
+      const lng = attribute(match[1], 'lon');
+      if (lat === null || lng === null ||
+          Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
+      const body = match[2] || '';
+      const ele = kudosNumber_(tagText(body, 'ele'));
+      const time = kudosTimestamp_(tagText(body, 'time'));
+      const hr = kudosNumber_(tagText(body, 'hr'));
+      result.push({ lat, lng, ele, time, hr });
+    }
+    return result;
+  };
+
+  const segments = [];
+  const segmentsPattern = /<(?:[\w.-]+:)?trkseg\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?trkseg\s*>/gi;
+  let segment;
+  while ((segment = segmentsPattern.exec(xml)) !== null) {
+    const points = parsePoints(segment[1]);
+    if (points.length) segments.push(points);
+  }
+
+  if (!segments.length) {
+    const routePattern = /<(?:[\w.-]+:)?rte\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?rte\s*>/gi;
+    let route;
+    while ((route = routePattern.exec(xml)) !== null) {
+      const points = parsePoints(route[1]);
+      if (points.length) segments.push(points);
+    }
+  }
+  if (!segments.length) return null;
+
+  const track = /<(?:[\w.-]+:)?trk\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?trk\s*>/i.exec(xml);
+  const route = /<(?:[\w.-]+:)?rte\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?rte\s*>/i.exec(xml);
+  const metadata = /<(?:[\w.-]+:)?metadata\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?metadata\s*>/i.exec(xml);
+  const activity = track ? track[1] : route ? route[1] : '';
+  return {
+    format: 'GPX',
+    segments,
+    name: tagText(activity, 'name') || tagText(metadata ? metadata[1] : '', 'name'),
+    sportHint: tagText(activity, 'type'),
+    fallbackStart: kudosTimestamp_(tagText(metadata ? metadata[1] : '', 'time')),
+    fallbackSeconds: null,
+  };
+}
+
+function kudosParseGpsSource_(xmlText) {
   const cleanText = String(xmlText).replace(/^\uFEFF/, '');
+  const fast = kudosParseGpxFast_(cleanText);
+  if (fast) return fast;
   const root = XmlService.parse(cleanText).getRootElement();
   const name = root.getName().toLowerCase();
-  let parsed;
-  if (name === 'gpx') {
-    parsed = kudosParseGpx_(root);
-  } else if (name === 'trainingcenterdatabase') {
-    parsed = kudosParseTcx_(root);
-  } else {
-    const error = new Error('Unsupported XML root: ' + root.getName());
-    error.unsupported = true;
-    throw error;
-  }
-  return kudosAnalyzeSegments_(parsed, settings);
+  if (name === 'gpx') return kudosParseGpx_(root);
+  if (name === 'trainingcenterdatabase') return kudosParseTcx_(root);
+  const error = new Error('Unsupported XML root: ' + root.getName());
+  error.unsupported = true;
+  throw error;
+}
+
+function kudosParseActivity_(xmlText, settings) {
+  return kudosAnalyzeSegments_(kudosParseGpsSource_(xmlText), settings);
 }
 
 function kudosSha256_(value) {

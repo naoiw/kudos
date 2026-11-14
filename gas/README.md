@@ -93,6 +93,23 @@ Apps Scriptのエディターから **`setupSheets()`** を一度実行します
 
 `ImportLog.status` は `imported`、`duplicate`、`unsupported`、`rejected`、`error` のいずれかです。解析エラーは同一ファイルに最大3回試行します。再試行したい場合はその行の `attempts` を0へ戻してください。
 
+### 未取り込みGPXの手動一括処理（定期実行なし）
+
+大量のGPXがある場合は、GASエディタで次の関数を順に利用してください。
+
+1. `showImportProgress()`：`ImportLog` のユーザー別 `imported / duplicate / error` 件数をログで確認
+2. `importNextManualBatch()`：**1回分の取り込み**を実行。既存の `syncAllActivities()` と同じ処理だが結果を明示
+3. まだ未処理のファイルがある場合は、`importNextManualBatch()` を手動で再実行
+4. `SyncLog.notes` に `Paused at the runtime/file budget` が出なくなり、`ImportLog` の件数がDriveのGPX/TCXファイル数に達するまで繰り返す
+5. 完了後に `publishApprovedPublicPreview()` を**手動実行**してページに反映
+
+- 既定値は **1回あたり最大30ファイル・240秒**。Google Apps Scriptの実行上限のため、全件を一度に取り込むとは限りません。ファイル数50件や120件でも複数回必要になり得ます
+- `DriveApp.FileIterator` の継続トークンをスクリプトプロパティへ保存するため、次回は途中から再開します。継続トークンの期限が切れたときは最初から走査しますが、既存ファイルは重複登録しません
+- 通常のGPXは専用の高速解析を使用し、大きなXML全体を `XmlService` でオブジェクト化しないようにします。TCXや特殊なGPXでは従来のパーサーにフォールバックします
+- 件数を確認するにはDriveの各ユーザー専用フォルダのファイル数を参照してください。**`showImportProgress()` はDrive総ファイル数を調べず、取り込み済み件数を表示する関数です**
+- 現段階では `installSyncTriggers()` は実行不要です。**定期実行は無効のまま**、動作確認がすべて終わってから設定します
+- `ImportLog.status=unsupported/rejected/error` のファイルは `Activities` に表示されない場合があります。その場合はエラーを確認してください
+
 ## 5. 定期実行
 
 **`installSyncTriggers()`** を実行すると、Apps Scriptトリガーを3つ設定します。
@@ -173,3 +190,13 @@ Apps Scriptのプロジェクト設定にある **スクリプト プロパテ�
 ### 7-5. 公開を止める
 
 `Settings.public_preview_export_approval` を `disabled` に戻すだけでは、**既にGitHubへ公開したJSONは消えません**。公開を終了する場合は、`public/data/preview.json` を無効化したダミーJSONへ置き換え、GitHub Pagesの再デプロイを確認してください。過去にコミットしたGPS経路や表示名はGit履歴に残り得るため、将来リポジトリをPrivateに切り替える場合もそれ以前の公開状態を考慮してください。
+
+## 8. 足跡マップと都道府県フォーカス
+
+Webアプリは `public/data/preview.json` の `summary_polyline` / `route_segments` を日本47都道府県のGeoJSONと照合して、**経路が通過したすべての都道府県**を訪問済みとして色付けします。GPXからGPS座標をSheetsへ追加する必要はありません。
+
+都道府県をクリックすると、その都道府県を通過するアクティビティに絞り込み、ルートマップではその県内にある経路部分の範囲にフォーカスします。都道府県の輪郭だけではなく、実際の走行地点を優先します。
+
+`prefecture_override` に都道府県を入力している場合は、その都道府県も候補として含めます。地図に経路がないレコードには引き続き手動設定が利用できます。
+
+**公開サイト上のEncoded Polylineには実際のGPS座標が含まれます。** リポジトリや配信先をPrivateにする計画があっても、現時点でPublicなGitHub Pagesに出力した経路は一般公開されます。
