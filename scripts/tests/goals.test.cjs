@@ -13,13 +13,13 @@ const defaults = {
   Golf: { yearly: 10, monthly: 1 },
 };
 const storage = new Map();
-const exports = {};
+const goalsModule = {};
 const source = ts.transpileModule(
   fs.readFileSync('src/core/goals.ts', 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }
 ).outputText;
 vm.runInNewContext(source, {
-  exports,
+  exports: goalsModule,
   require(name) {
     if (name === './config') {
       return { GOALS: Object.fromEntries(
@@ -45,48 +45,48 @@ test('bundled config defines cycling, walking and golf annual/monthly defaults',
       '  ' + sport + ':\\s*\\n    yearly: ' + year + '\\s*\\n    monthly: ' + month + '\\b'
     ));
   }
-  assert.deepEqual({ ...exports.defaultSportGoals().Ride }, defaults.Ride);
-  assert.deepEqual({ ...exports.defaultSportGoals().Walk }, defaults.Walk);
-  assert.deepEqual({ ...exports.defaultSportGoals().Golf }, defaults.Golf);
+  assert.deepEqual({ ...goalsModule.defaultSportGoals().Ride }, defaults.Ride);
+  assert.deepEqual({ ...goalsModule.defaultSportGoals().Walk }, defaults.Walk);
+  assert.deepEqual({ ...goalsModule.defaultSportGoals().Golf }, defaults.Golf);
 });
 
 test('individual sports and combined filter show independent goals', () => {
-  const goals = exports.defaultSportGoals();
-  const selected = exports.getGoalForFilter('Walk', goals);
+  const goals = goalsModule.defaultSportGoals();
+  const selected = goalsModule.getGoalForFilter('Walk', goals);
   assert.equal(selected.yearly, 250);
   assert.equal(selected.monthly, 20);
   assert.ok(selected.weekly > 4.6 && selected.weekly < 4.7);
-  const combined = exports.getGoalForFilter('all', goals);
+  const combined = goalsModule.getGoalForFilter('all', goals);
   assert.equal(combined.yearly, 2260);
   assert.equal(combined.monthly, 171);
   assert.equal(combined.weekly, 39.46);
 });
 
 test('user-specific goals persist and can be reset without changing other users', () => {
-  const a = exports.defaultSportGoals();
+  const a = goalsModule.defaultSportGoals();
   a.Golf = { yearly: 18, monthly: 1.5 };
-  assert.equal(exports.saveSportGoals('alice', a), true);
-  assert.equal(exports.loadSportGoals('alice').Golf.yearly, 18);
-  assert.equal(exports.loadSportGoals('bob').Golf.yearly, 10);
-  assert.equal(exports.resetSportGoals('alice'), true);
-  assert.equal(exports.loadSportGoals('alice').Golf.yearly, 10);
+  assert.equal(goalsModule.saveSportGoals('alice', a), true);
+  assert.equal(goalsModule.loadSportGoals('alice').Golf.yearly, 18);
+  assert.equal(goalsModule.loadSportGoals('bob').Golf.yearly, 10);
+  assert.equal(goalsModule.resetSportGoals('alice'), true);
+  assert.equal(goalsModule.loadSportGoals('alice').Golf.yearly, 10);
 });
 
 test('invalid goals and malformed stored JSON cannot poison the dashboard', () => {
-  assert.equal(exports.isValidGoalKm(0), false);
-  assert.equal(exports.isValidGoalKm(Number.NaN), false);
-  assert.equal(exports.isValidGoalKm(Infinity), false);
-  assert.equal(exports.isValidGoalKm('1'), false);
-  assert.equal(exports.isValidGoalKm(0.5), true);
+  assert.equal(goalsModule.isValidGoalKm(0), false);
+  assert.equal(goalsModule.isValidGoalKm(Number.NaN), false);
+  assert.equal(goalsModule.isValidGoalKm(Infinity), false);
+  assert.equal(goalsModule.isValidGoalKm('1'), false);
+  assert.equal(goalsModule.isValidGoalKm(0.5), true);
   const corrupt = { Ride: { yearly: -1, monthly: 7 }, Walk: { yearly: null } };
-  const sanitized = exports.mergeStoredSportGoals(corrupt);
+  const sanitized = goalsModule.mergeStoredSportGoals(corrupt);
   assert.equal(sanitized.Ride.yearly, 2000);
   assert.equal(sanitized.Ride.monthly, 7);
   assert.equal(sanitized.Walk.yearly, 250);
   assert.equal(sanitized.Golf.monthly, 1);
   storage.set('kudos:sport-goals:v1:broken', '{');
-  assert.equal(exports.loadSportGoals('broken').Ride.monthly, 150);
-  assert.equal(exports.saveSportGoals('bad', {
+  assert.equal(goalsModule.loadSportGoals('broken').Ride.monthly, 150);
+  assert.equal(goalsModule.saveSportGoals('bad', {
     Ride: { yearly: 0, monthly: 1 },
     Walk: defaults.Walk,
     Golf: defaults.Golf,
