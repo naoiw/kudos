@@ -158,6 +158,7 @@ function createFixture() {
       return {
         getProperty: key => props.get(key) || null,
         setProperty: (key, value) => props.set(key, value),
+        deleteProperty: (key) => props.delete(key),
       };
     } },
     DriveApp: {
