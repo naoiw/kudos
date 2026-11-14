@@ -365,7 +365,7 @@ test('preview keeps spreadsheet display names without exporting account credenti
   assert.equal(activity.location_country, '東京都');
   assert.equal(activity.average_heartrate, null);
   assert.equal(activity.name, 'Hospital visit');
-  assert.ok(activity.start_date_local.startsWith('2026-11-'));
+  assert.equal(activity.start_date_local, '2026-11');
   assert.equal(activity.start_date_local, '2026-11');
   assert.equal(activity.distance, 78000);
 
