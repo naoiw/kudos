@@ -532,7 +532,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                   {yr}
                 </span>
                 <span className="text-xs text-[var(--color-muted)]">
-                  {stats.count} {locale === 'ja' ? '次' : 'sessions'}
+                  {stats.count} {locale === 'ja' ? '回' : 'sessions'}
                   {!isGym && ` · ${formatDistance(stats.distance)} km`}
                 </span>
               </div>
@@ -741,7 +741,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                     d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
-                {allStats.count} {locale === 'ja' ? '次' : 'sessions'}
+                {allStats.count} {locale === 'ja' ? '回' : 'sessions'}
               </span>
               <span className="flex items-center gap-1 font-mono">
                 <svg
@@ -795,7 +795,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                     d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
-                {yearData[0].stats.count} {locale === 'ja' ? '次' : 'sessions'}
+                {yearData[0].stats.count} {locale === 'ja' ? '回' : 'sessions'}
               </span>
               <span className="flex items-center gap-1 font-mono">
                 <svg

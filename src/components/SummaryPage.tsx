@@ -32,7 +32,7 @@ function SummaryCard({
   activities,
   period,
   label,
-  zh,
+  isJapanese,
   onSelectActivity,
   monthOnly,
 }: {
@@ -40,58 +40,58 @@ function SummaryCard({
   period: SummaryPeriod;
   monthOnly: boolean;
   label: string;
-  zh: boolean;
+  isJapanese: boolean;
   onSelectActivity: (a: Activity) => void;
 }) {
   const stats = summarize(activities);
   const chartAvailable = !monthOnly || period !== 'month';
   const chart = chartAvailable ? summaryChart(activities, period, label) : [];
   const metrics = [
-    [zh ? '活動回数' : 'Activities', String(stats.count)],
+    [isJapanese ? '活動回数' : 'Activities', String(stats.count)],
     [
-      zh ? '運動時間' : 'Moving time',
+      isJapanese ? '運動時間' : 'Moving time',
       `${Math.floor(stats.seconds / 3600)}h ${Math.floor((stats.seconds % 3600) / 60)}m`,
     ],
     [
-      zh ? '平均ペース' : 'Average pace',
+      isJapanese ? '平均ペース' : 'Average pace',
       stats.speed > 0 ? `${formatPace(stats.speed)} /km` : '—',
     ],
     [
-      zh ? '平均心拍数' : 'Average heart rate',
+      isJapanese ? '平均心拍数' : 'Average heart rate',
       stats.heartRate ? `${Math.round(stats.heartRate)} bpm` : '—',
     ],
     [
-      zh ? '最長距離' : 'Longest activity',
+      isJapanese ? '最長距離' : 'Longest activity',
       `${number(stats.maxDistance / 1000)} km`,
     ],
     [
-      zh ? '最速ペース' : 'Fastest pace',
+      isJapanese ? '最速ペース' : 'Fastest pace',
       stats.maxSpeed > 0 ? `${formatPace(stats.maxSpeed)} /km` : '—',
     ],
     [
-      zh ? '平均距離' : 'Average distance',
+      isJapanese ? '平均距離' : 'Average distance',
       `${number(stats.distance / stats.count / 1000)} km`,
     ],
-    [zh ? '累積獲得標高' : 'Elevation gain', `${number(stats.elevation)} m`],
+    [isJapanese ? '累積獲得標高' : 'Elevation gain', `${number(stats.elevation)} m`],
   ];
   const chartUnit =
     period === 'life'
-      ? zh
+      ? isJapanese
         ? '年'
         : 'Year'
       : period === 'year'
-        ? zh
+        ? isJapanese
           ? '月'
           : 'Month'
         : period === 'week'
-          ? zh
+          ? isJapanese
             ? '月曜〜日曜'
             : 'Mon–Sun'
           : period === 'day'
-            ? zh
+            ? isJapanese
               ? '開始日時'
               : 'Start time'
-            : zh
+            : isJapanese
               ? '日'
               : 'Day';
   return (
@@ -99,7 +99,7 @@ function SummaryCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-lg font-semibold">
           {label === 'Life'
-            ? zh
+            ? isJapanese
               ? '全期間の記録'
               : 'All time · Life'
             : label}
@@ -171,7 +171,7 @@ function SummaryCard({
         </p>
       </div> : (
         <p className="text-sm text-[var(--color-muted)]" role="note">
-          {zh ? '月単位で公開されているため、日別の内訳は表示しません。'
+          {isJapanese ? '月単位で公開されているため、日別の内訳は表示しません。'
             : 'Daily breakdown is unavailable for month-only public data.'}
         </p>
       )}
@@ -207,7 +207,7 @@ export function SummaryPage({
   datePrecision?: DatePrecision | null;
 }) {
   const { locale, t } = useLocale();
-  const zh = locale === 'ja';
+  const isJapanese = locale === 'ja';
   const monthOnly = datePrecision === 'month';
   const [period, setPeriod] = useState<SummaryPeriod>('month');
   const [sport, setSport] = useState('all');
@@ -238,15 +238,15 @@ export function SummaryPage({
   );
   const periods: [SummaryPeriod, string][] = monthOnly
     ? [
-        ['year', zh ? '年' : 'Year'],
-        ['month', zh ? '月' : 'Month'],
+        ['year', isJapanese ? '年' : 'Year'],
+        ['month', isJapanese ? '月' : 'Month'],
         ['life', 'Life'],
       ]
     : [
-        ['year', zh ? '年' : 'Year'],
-        ['month', zh ? '月' : 'Month'],
-        ['week', zh ? '週' : 'Week'],
-        ['day', zh ? '日' : 'Day'],
+        ['year', isJapanese ? '年' : 'Year'],
+        ['month', isJapanese ? '月' : 'Month'],
+        ['week', isJapanese ? '週' : 'Week'],
+        ['day', isJapanese ? '日' : 'Day'],
         ['life', 'Life'],
       ];
   return (
@@ -255,16 +255,16 @@ export function SummaryPage({
         <div>
           <h1 className="text-2xl font-semibold">{t('summary')}</h1>
           <p className="mt-2 text-sm text-[var(--color-muted)]">
-            {zh
+            {isJapanese
               ? 'これまでの活動を時系列で振り返ります。'
               : 'Your activity history, one period at a time.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <label className="text-xs text-[var(--color-muted)]">
-            {zh ? '種目' : 'Sport'}
+            {isJapanese ? '種目' : 'Sport'}
             <select
-              aria-label={zh ? '種目' : 'Sport'}
+              aria-label={isJapanese ? '種目' : 'Sport'}
               className={`${control} ml-2`}
               value={sport}
               onChange={(e) => {
@@ -272,7 +272,7 @@ export function SummaryPage({
                 setLimit(12);
               }}
             >
-              <option value="all">{zh ? 'すべての種目' : 'All sports'}</option>
+              <option value="all">{isJapanese ? 'すべての種目' : 'All sports'}</option>
               {sports.map((s) => (
                 <option key={s} value={s}>
                   {sportLabel(s, locale)}
@@ -281,9 +281,9 @@ export function SummaryPage({
             </select>
           </label>
           <label className="text-xs text-[var(--color-muted)]">
-            {zh ? '年' : 'Year'}
+            {isJapanese ? '年' : 'Year'}
             <select
-              aria-label={zh ? '集計対象の年' : 'Summary year'}
+              aria-label={isJapanese ? '集計対象の年' : 'Summary year'}
               className={`${control} ml-2`}
               value={year}
               onChange={(e) => {
@@ -291,7 +291,7 @@ export function SummaryPage({
                 setLimit(12);
               }}
             >
-              <option value="all">{zh ? 'すべての年' : 'All years'}</option>
+              <option value="all">{isJapanese ? 'すべての年' : 'All years'}</option>
               {years.map((y) => (
                 <option key={y}>{y}</option>
               ))}
@@ -300,13 +300,13 @@ export function SummaryPage({
         </div>
       </div>
       {monthOnly && <p className="mb-4 text-sm text-[var(--color-muted)]" role="note">
-        {zh ? '活動日時は年月のみ公開されています。日・週別集計は表示しません。'
+        {isJapanese ? '活動日時は年月のみ公開されています。日・週別集計は表示しません。'
           : 'Only year and month are public; daily and weekly statistics are hidden.'}
       </p>}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
-          aria-label={zh ? '集計単位' : 'Summary period'}
+          aria-label={isJapanese ? '集計単位' : 'Summary period'}
           className="flex gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-1"
         >
           {periods.map(([value, label]) => (
@@ -324,7 +324,7 @@ export function SummaryPage({
           ))}
         </div>
         <span className="text-sm text-[var(--color-muted)]">
-          {groups.length} {zh ? '期間' : 'periods'}
+          {groups.length} {isJapanese ? '期間' : 'periods'}
         </span>
       </div>
       {!groups.length ? (
@@ -332,7 +332,7 @@ export function SummaryPage({
           role="status"
           className={`${panel} py-16 text-center text-[var(--color-muted)]`}
         >
-          {zh
+          {isJapanese
             ? '条件に一致する記録はありません。'
             : 'No activities match these filters.'}
         </p>
@@ -346,7 +346,7 @@ export function SummaryPage({
               label={key}
               activities={items}
               period={period}
-              zh={zh}
+              isJapanese={isJapanese}
               monthOnly={monthOnly}
               onSelectActivity={onSelectActivity}
             />
@@ -356,7 +356,7 @@ export function SummaryPage({
       {groups.length > limit && (
         <div className="mt-6 text-center">
           <button className={control} onClick={() => setLimit((n) => n + 12)}>
-            {zh ? 'もっと見る' : 'Load more'} ({limit}/{groups.length})
+            {isJapanese ? 'もっと見る' : 'Load more'} ({limit}/{groups.length})
           </button>
         </div>
       )}
