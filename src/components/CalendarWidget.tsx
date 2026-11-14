@@ -162,10 +162,10 @@ export function CalendarWidget({
         })}
       </div>
       {/* Keep this panel the same height when navigating months or selecting days. */}
-      <div className="mt-3 h-24 overflow-y-auto" aria-live="polite">
+      <div className="mt-3 h-12 overflow-y-auto" aria-live="polite">
         {day !== null && dayActivities.length > 0 ? (
-          <div className="space-y-1 border-t border-[var(--color-border)] pt-3">
-            <p className="mb-2 text-xs text-[var(--color-muted)]">
+          <div className="space-y-1 border-t border-[var(--color-border)] pt-1">
+            <p className="mb-1 text-xs text-[var(--color-muted)]">
               {monthIndex + 1}/{day} ·{' '}
               {isJapanese ? 'アクティビティを選んで経路を見る' : 'Select an activity to view its route'}
             </p>
@@ -173,7 +173,7 @@ export function CalendarWidget({
               <button
                 key={activity.run_id}
                 aria-pressed={selectedActivity?.run_id === activity.run_id}
-                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-[var(--color-bg)] aria-pressed:bg-[var(--color-accent)]/10"
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-[var(--color-bg)] aria-pressed:bg-[var(--color-accent)]/10"
                 onClick={() => onSelectActivity(activity)}
               >
                 <span className="min-w-0 truncate">
