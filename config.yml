@@ -7,17 +7,22 @@ theme_preset: dashboard
 
 goals:
   all:
-    yearly: 2000
-    monthly: 150
-    weekly: 35
-    unit: distance
-  Run:
-    yearly: 500
-    monthly: 40
-    weekly: 10
+    yearly: 2260
+    monthly: 171
+    weekly: 39.46
     unit: distance
   Ride:
     yearly: 2000
     monthly: 150
-    weekly: 35
+    weekly: 34.62
+    unit: distance
+  Walk:
+    yearly: 250
+    monthly: 20
+    weekly: 4.62
+    unit: distance
+  Golf:
+    yearly: 10
+    monthly: 1
+    weekly: 0.23
     unit: distance
