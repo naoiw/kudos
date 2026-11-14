@@ -2,10 +2,11 @@ import { memo, useState } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { formatDistance, parseMovingTime } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
-import { GOALS, DEFAULT_GOAL } from '../config';
+import { getGoalForFilter, type SportGoals } from '../core/goals';
 import type { DatePrecision } from '../core/datePrecision';
 
 interface StatsCardsProps {
+  goals: SportGoals;
   datePrecision?: DatePrecision | null;
   activities: Activity[];
   allActivities: Activity[];
@@ -15,6 +16,7 @@ interface StatsCardsProps {
 }
 
 export const StatsCards = memo(function StatsCards({
+  goals,
   datePrecision,
   activities,
   allActivities,
@@ -24,8 +26,8 @@ export const StatsCards = memo(function StatsCards({
 }: StatsCardsProps) {
   const { t, locale } = useLocale();
   const monthOnly = datePrecision === 'month';
-  const goal = GOALS[filter] ?? DEFAULT_GOAL;
-  // For Gym, goals are in minutes; for others, goals are in km → convert to meters
+  const goal = getGoalForFilter(filter, goals);
+  // Goals are specified in kilometres; convert them to meters for activity totals.
   const yearGoalMeters = goal.unit === 'time' ? 0 : goal.yearly * 1000;
   const monthGoalMeters = goal.unit === 'time' ? 0 : goal.monthly * 1000;
   const weekGoalMeters = goal.unit === 'time' ? 0 : goal.weekly * 1000;
