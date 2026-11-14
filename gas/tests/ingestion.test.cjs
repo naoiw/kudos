@@ -359,7 +359,7 @@ test('preview keeps spreadsheet display names without exporting account credenti
   const activity = result.activities[0];
   assert.equal(activity.user_id, 'u01');
   assert.equal(activity.summary_polyline, null);
-  assert.equal(activity.location_country, null);
+  assert.equal(activity.location_country, '東京都');
   assert.equal(activity.average_heartrate, null);
   assert.equal(activity.name, 'Hospital visit');
   assert.ok(activity.start_date_local.startsWith('2026-11-'));
@@ -444,7 +444,7 @@ test('preview carries real display names and activity labels while withholding s
   assert.equal(activity.user_id, 'u01');
   assert.equal(activity.distance, 78100);
   assert.equal(activity.summary_polyline, null);
-  assert.equal(activity.location_country, null);
+  assert.equal(activity.location_country, '東京都');
   assert.equal(activity.average_heartrate, null);
   assert.equal(activity.start_date_local.slice(0, 7), '2022-07');
   assert.ok(activity.start_date_local.endsWith('T12:00:00'));
