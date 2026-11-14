@@ -4,7 +4,7 @@ export interface Activity {
   name: string;
   distance: number; // meters
   moving_time: string; // "H:MM:SS"
-  type: 'Run' | 'Ride' | string;
+  type: 'Ride' | 'Walk' | 'Golf' | string;
   subtype?: string;
   start_date: string;
   start_date_local: string;
@@ -18,4 +18,4 @@ export interface Activity {
   streak: number;
 }
 
-export type SportFilter = 'all' | 'Run' | 'Ride';
+export type SportFilter = 'all' | 'Ride' | 'Walk' | 'Golf';

@@ -93,10 +93,14 @@ function kudosSaveActivity_(sheet, current, parsed, user, file, digest, settings
   const activityId = current ? current.activity_id :
     'act_' + kudosSha256_(user.user_id + ':' + file.getId()).slice(0, 20);
   const runId = Number.parseInt(kudosSha256_(activityId).slice(0, 12), 16);
-  const detected = parsed.sportDetected;
   const override = current ? kudosText_(current.sport_override) : '';
   const nameOverride = current ? kudosText_(current.name_override) : '';
-  const sport = override === 'Run' || override === 'Ride' ? override : detected;
+  const activityName = parsed.name || file.getName();
+  const effectiveName = nameOverride || activityName;
+  const detected = kudosSportFromName_(effectiveName) ||
+    kudosNormalizeSport_(parsed.sportDetected) || 'Unknown';
+  const selection = kudosResolveSport_(effectiveName, parsed.sportDetected, override);
+  const sport = selection.sport;
   const imported = current && current.imported_at ? current.imported_at : now;
   const state = sport === 'Unknown' ? 'needs_review' : 'ok';
   const updated = {
@@ -111,12 +115,13 @@ function kudosSaveActivity_(sheet, current, parsed, user, file, digest, settings
     start_date_local: Utilities.formatDate(
       new Date(parsed.startUtc), user.timezone || KUDOS_TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss"
     ),
-    name: parsed.name || file.getName(),
+    name: activityName,
     name_override: nameOverride,
     sport_detected: detected,
     sport_override: override,
     sport_final: sport,
-    sport_confidence: parsed.sportConfidence,
+    sport_confidence: selection.confidence === 'inferred'
+      ? parsed.sportConfidence : selection.confidence,
     distance_m: Math.round(parsed.distanceMeters),
     moving_time_s: Math.round(parsed.movingSeconds),
     elapsed_time_s: Math.round(parsed.elapsedSeconds),
@@ -137,8 +142,8 @@ function kudosSaveActivity_(sheet, current, parsed, user, file, digest, settings
 }
 
 /**
- * Recompute sport_final after an administrator edits sport_override.
- * Never overwrite the human override when reimporting a GPX.
+ * Reclassify all existing records using their activity titles.
+ * Keep manual sport_override as the highest priority. No GPX reimport needed.
  */
 function applyActivityOverrides() {
   const ss = kudosOpenSpreadsheet_();
@@ -152,9 +157,24 @@ function kudosApplyOverrides_(sheet) {
   let changed = 0;
   rows.forEach((row) => {
     const override = kudosText_(row.sport_override);
-    const detected = kudosText_(row.sport_detected) || 'Unknown';
-    const final = override === 'Run' || override === 'Ride' ? override : detected;
+    const effectiveName = kudosText_(row.name_override) ||
+      kudosText_(row.name) || kudosText_(row.filename);
+    const fromName = kudosSportFromName_(effectiveName);
+    const detected = fromName ||
+      kudosNormalizeSport_(row.sport_detected) || 'Unknown';
+    const selection = kudosResolveSport_(effectiveName, row.sport_detected, override);
+    const final = selection.sport;
     const state = final === 'Unknown' ? 'needs_review' : 'ok';
+    if (kudosText_(row.sport_detected) !== detected) {
+      sheet.getRange(row._row, pos.sport_detected).setValue(detected);
+      changed++;
+    }
+    const confidence = selection.confidence === 'inferred'
+      ? kudosText_(row.sport_confidence) || 'inferred'
+      : selection.confidence;
+    if (kudosText_(row.sport_confidence) !== confidence) {
+      sheet.getRange(row._row, pos.sport_confidence).setValue(confidence);
+    }
     if (kudosText_(row.sport_final) !== final) {
       sheet.getRange(row._row, pos.sport_final).setValue(final);
       changed++;

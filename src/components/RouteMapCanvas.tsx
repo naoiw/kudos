@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as polyline from '@mapbox/polyline';
 import type { Activity } from '../types';
 import { hasRoute, routeForActivity } from '../core/routeFallback';
+import { sportColor } from '../core/sports';
 import { activityPointsInPrefecture, prefectureBounds } from '../core/prefectureRoutes';
 import { useLocale } from '../hooks/useLocale';
 import './RouteMap.css';
@@ -255,7 +256,7 @@ export function RouteMapCanvas({
     const points: LatLng[] = [];
     for (const route of routes) {
       const layer = L.polyline(route.points, {
-        color: route.type === 'Run' ? '#f97316' : '#3b82f6',
+        color: sportColor(route.type),
         weight: selectedActivity ? 4 : 2.5,
         opacity: selectedActivity ? 1 : 0.75,
       });

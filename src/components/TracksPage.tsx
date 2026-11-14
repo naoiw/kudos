@@ -3,6 +3,8 @@ import { exportCard } from '../utils/exportCard';
 import { RouteMap } from './RouteMap';
 import * as polyline from '@mapbox/polyline';
 import type { Activity } from '../types';
+import { SPORT_ORDER, SPORT_DETAILS, sportColor } from '../core/sports';
+import type { Sport } from '../core/sports';
 import {
   getAvailableYears,
   formatDistance,
@@ -11,7 +13,7 @@ import {
 } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
 
-type SportType = 'Run' | 'Ride';
+type SportType = Sport;
 const trackPlaceholders = Array.from({ length: 40 }, (_, id) => ({
   id,
   delay: id * 20,
@@ -101,11 +103,11 @@ const TrackThumb = memo(function TrackThumb({
 });
 
 function getColor(a: Activity): string {
-  if (a.type === 'Run') {
+  if (a.type === 'Walk') {
     const km = a.distance / 1000;
     return km >= 20 ? '#ef4444' : '#f97316';
   }
-  return '#4dd2ff';
+  return sportColor(a.type);
 }
 
 export function TracksPage({
@@ -171,7 +173,7 @@ export function TracksPage({
     for (const activity of base) {
       totalDist += activity.distance;
       totalTime += parseMovingTime(activity.moving_time);
-      if (activity.type === 'Run' && activity.average_speed > 0) {
+      if (activity.type === 'Walk' && activity.average_speed > 0) {
         speed += activity.average_speed;
         runs++;
       }
@@ -259,10 +261,12 @@ export function TracksPage({
     : 0;
   const selectedDurationLabel = `${Math.floor(selectedSeconds / 3600) ? Math.floor(selectedSeconds / 3600) + 'h ' : ''}${Math.floor((selectedSeconds % 3600) / 60)}m`;
 
-  const allSportTabs: { label: string; value: SportType; color: string }[] = [
-    { label: locale === 'ja' ? 'ランニング' : 'Run', value: 'Run', color: '#f97316' },
-    { label: locale === 'ja' ? 'サイクリング' : 'Ride', value: 'Ride', color: '#3b82f6' },
-  ];
+  const allSportTabs: { label: string; value: SportType; color: string }[] =
+    SPORT_ORDER.map((sport) => ({
+      value: sport,
+      label: SPORT_DETAILS[sport][locale],
+      color: SPORT_DETAILS[sport].color,
+    }));
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6">
@@ -682,15 +686,15 @@ export function TracksPage({
             {/* Legend + sort */}
             {!clustering && clusteredTracks.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-muted)]">
-                {sportFilter === null || sportFilter === 'Run' ? (
+                {sportFilter === null || sportFilter === 'Walk' ? (
                   <>
                     <span className="flex items-center gap-1.5">
                       <span className="inline-block h-0.5 w-3 rounded bg-[#f97316]" />
-                      {locale === 'ja' ? 'ランニング' : 'Run'}
+                      {locale === 'ja' ? 'ウォーキング' : 'Walking'}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="inline-block h-0.5 w-3 rounded bg-[#ef4444]" />
-                      {locale === 'ja' ? 'ランニング ≥20km' : 'Run ≥20km'}
+                      {locale === 'ja' ? 'ウォーキング ≥20km' : 'Walking ≥20km'}
                     </span>
                   </>
                 ) : null}

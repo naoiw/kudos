@@ -30,10 +30,10 @@ export const PersonalBest = memo(function PersonalBest({
 }: PersonalBestProps) {
   const { locale } = useLocale();
 
-  // Only outdoor runs with valid GPS tracks (polyline must be substantial, not just a point)
+  // Only walking/hiking activities with valid GPS tracks (polyline must be substantial, not just a point)
   const runs = activities.filter(
     (a) =>
-      a.type === 'Run' && a.summary_polyline && a.summary_polyline.length > 20
+      a.type === 'Walk' && a.summary_polyline && a.summary_polyline.length > 20
   );
 
   const labels: Record<string, string> =

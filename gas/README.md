@@ -220,3 +220,23 @@ Webアプリは `public/data/preview.json` の `summary_polyline` / `route_segme
 `prefecture_override` に都道府県を入力している場合は、その都道府県も候補として含めます。地図に経路がないレコードには引き続き手動設定が利用できます。
 
 **公開サイト上のEncoded Polylineには実際のGPS座標が含まれます。** リポジトリや配信先をPrivateにする計画があっても、現時点でPublicなGitHub Pagesに出力した経路は一般公開されます。
+
+## 9. アクティビティ種目の判定（サイクリング・ウォーキング・ゴルフ）
+
+Webアプリの種目は次の3種類に統一します。画面上の選択肢と表示順は **サイクリング → ウォーキング → ゴルフ** です。
+
+| 内部種目 | UI表示名 | アクティビティ名からの判定例 |
+| --- | --- | --- |
+| `Ride` | サイクリング | サイクリング、ライド、自転車、ポタリング、cycling、bike、ride |
+| `Walk` | ウォーキング | ハイキング、ランニング、ジョギング、ウォーキング、ウォーク、散歩、walking、running、hiking |
+| `Golf` | ゴルフ | ゴルフ、golf |
+
+**判定優先順位：** `Activities.sport_override`（管理者が明示指定）→ `name_override` または `name` のキーワード → GPX/TCXの種目属性と速度による推定。
+
+従来の `Run` は `Walk` に変換されます。未分類 `Unknown` は引き続き確認対象です。手動指定に使える値は `Ride`、`Walk`、`Golf`。旧 `Run` の手動指定も互換扱いで `Walk` に変換されます。
+
+**すでに取り込み済みの活動を再判定するには：** GASの `00_Config.gs`、`01_Sheets.gs`、`02_Parser.gs`、`05_PublicPreview.gs` を更新して `applyActivityOverrides()` を1回実行してください。既存GPXの再取り込みは不要です。
+
+Webアプリ側でも旧形式の公開JSONについてタイトルを用いた互換判定を行うため、**既に公開した経路データをすべて再Publishしなくても種目のフィルタ表示を更新できます**。今後 `publishApprovedPublicPreview()` を実行した際は、GAS側が判定した種目と手動指定を尊重するため `genre_version: 1` が公開JSONに付与されます。
+
+定期実行を有効化するものではありません。スケジュールは開発完了まで無効のままにしてください。

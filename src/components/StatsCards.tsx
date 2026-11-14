@@ -290,7 +290,7 @@ export const StatsCards = memo(function StatsCards({
     return `${h}h`;
   };
 
-  const unit = filter === 'Run' ? t('runs') : t('activities');
+  const unit = filter === 'Walk' ? t('runs') : t('activities');
 
   const todayIdx = (now.getDay() + 6) % 7; // Mon=0 … Sun=6
   const visualWeekStart = new Date(now.getTime() - todayIdx * 86400000);
@@ -303,7 +303,9 @@ export const StatsCards = memo(function StatsCards({
     if (acts.length === 0) return '';
     const sorted = [...acts].sort((a, b) => b.distance - a.distance);
     const type = sorted[0].type;
-    if (type === 'Run') return '#f97316';
+    if (type === 'Walk') return '#f97316';
+    if (type === 'Golf') return '#16a34a';
+    if (type === 'Ride') return '#3b82f6';
     return 'var(--color-text)';
   }
 

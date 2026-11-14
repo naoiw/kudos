@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { Activity, SportFilter } from '../types';
+import { sportIcon, sportLabel } from '../core/sports';
 import { useLocale } from '../hooks/useLocale';
 import {
   formatDistance,
@@ -225,8 +226,8 @@ export const ProfileCard = memo(function ProfileCard({
             {locale === 'ja' ? '最近のアクティビティ' : 'Latest Activity'}
           </p>
           <p className="text-sm font-medium">
-            {latest.type === 'Run' ? '🏃 ' : '🚴 '}
-            {latest.name || (latest.type === 'Run' ? 'Run' : 'Ride')}
+            {sportIcon(latest.type)}{' '}
+            {latest.name || sportLabel(latest.type, locale)}
             <span className="font-normal text-[var(--color-muted)]">
               {' '}
               · {formatDistance(latest.distance)} km ·{' '}

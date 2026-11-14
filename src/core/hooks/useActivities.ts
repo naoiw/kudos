@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Activity, SportFilter } from '../types';
+import { resolveActivitySport } from '../sports';
 
 // Detect Japanese prefectures in optional human-readable location metadata.
 const JAPANESE_PREFECTURES = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
@@ -142,6 +143,7 @@ interface PreviewDocument {
   mode: string;
   generated_at: string;
   date_precision?: 'month' | 'exact';
+  genre_version?: number;
   users: PublicPreviewUser[];
   activities: Activity[];
   route_chunks?: string[];
@@ -229,23 +231,29 @@ async function loadCatalog(): Promise<ActivityCatalog> {
               .filter(
                 (activity) =>
                   userIds.has(activity.user_id || '') &&
-                  (activity.type === 'Run' || activity.type === 'Ride') &&
                   typeof activity.distance === 'number' &&
                   typeof activity.start_date_local === 'string'
               )
               .map((activity) => {
-                if (!routes) return activity;
+                const type = resolveActivitySport(
+                  activity.name || '', activity.type || '',
+                  doc.genre_version === 1
+                );
+                if (!type) return null;
+                if (!routes) return { ...activity, type };
                 const segments = routes.get(activity.run_id);
                 if (!segments) throw new Error(
                   `Missing GPS route for activity ${activity.run_id}`
                 );
                 return {
                   ...activity,
+                  type,
                   summary_polyline: segments[0] || null,
                   route_segments: segments,
                 };
-              });
-            if (routes && routes.size !== activities.length) {
+              })
+              .filter((activity): activity is Activity => activity !== null);
+            if (routes && routes.size !== doc.activities.length) {
               throw new Error('Route chunk count does not match published activities');
             }
             return {

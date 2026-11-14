@@ -24,6 +24,7 @@ import { RouteMap } from '@/components/RouteMap';
 import { CalendarWidget } from '@/components/CalendarWidget';
 import { ProfileCard } from '@/components/ProfileCard';
 import { JapanMap } from '@/components/JapanMap';
+import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { PersonalBest } from '@/components/PersonalBest';
 
@@ -174,7 +175,7 @@ function Dashboard() {
         </span>
       </div>
       <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 pt-3 sm:px-6" role="group" aria-label="種目で絞り込み">
-        {([['all', 'すべて'], ['Run', 'ランニング'], ['Ride', 'サイクリング']] as const).map(([value, label]) => (
+        {([['all', 'すべて'] as const, ...SPORT_ORDER.map((sport) => [sport, SPORT_DETAILS[sport].ja] as const)]).map(([value, label]) => (
           <button key={value} type="button" aria-pressed={filter === value}
             onClick={() => { setFilter(value); setSelectedActivity(null); }}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filter === value ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}>
