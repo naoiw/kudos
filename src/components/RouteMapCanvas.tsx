@@ -326,7 +326,10 @@ export function RouteMapCanvas({
               : ja ? '背景地図 · OpenStreetMap' : 'Basemap · OpenStreetMap'}
         </span>
         {status === 'error' && (
-          <button className="route-map-action" onClick={() => setRetry((value) => value + 1)}>
+          <button className="route-map-action" onClick={() => {
+            setMapReady(false);
+            setRetry((value) => value + 1);
+          }}>
             {ja ? '再試行' : 'Retry'}
           </button>
         )}

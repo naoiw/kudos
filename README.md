@@ -40,3 +40,12 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 
 本プロジェクトの画面・コンポーネントは [yihong0618/running_page](https://github.com/yihong0618/running_page) を元に移植・改変しています。
 元プロジェクトはMITライセンスです。著作権表示は `LICENSE` に保持しています。
+
+## 地図ライブラリとクレジット
+
+ルートマップは [Leaflet 1.9.4](https://leafletjs.com/)（BSD 2-Clauseライセンス）で表示し、地図画像には OpenStreetMap の標準タイルを利用しています。
+
+- Leaflet: Copyright (c) 2010–2023 Volodymyr Agafonkin, Copyright (c) 2010–2011 CloudMade。原著作物のBSD 2-Clauseライセンスを適用します。
+- OpenStreetMap: © OpenStreetMap contributors。地図中に出典を表示します。タイルの利用には [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) が適用されます。
+- LeafletのJavaScript・CSSはバージョン固定のCDNから取得します。アプリのソース・ビルドに追加のnpm依存を持たせません。
+
