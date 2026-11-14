@@ -80,8 +80,12 @@
   background: #ffffffdf;
   color: #333;
 }
+/* Apply grayscale only to the raster tile pane, preserving route colors. */
+.route-map .leaflet-tile-pane {
+  filter: grayscale(1);
+}
 .route-map-dark .leaflet-tile-pane {
-  filter: brightness(0.8) saturate(0.65);
+  filter: grayscale(1) invert(1) contrast(0.88) brightness(0.84);
 }
 .route-map-empty {
   position: absolute;

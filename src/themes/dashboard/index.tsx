@@ -11,6 +11,7 @@ import {
 import type { Activity, SportFilter } from '@/types';
 import {
   useFilteredActivities,
+  extractProvince,
   getAvailableYears,
   getActivityData,
 } from '@/hooks/useActivities';
@@ -23,6 +24,7 @@ import { ActivityLog } from '@/components/ActivityLog';
 import { RouteMap } from '@/components/RouteMap';
 import { CalendarWidget } from '@/components/CalendarWidget';
 import { ProfileCard } from '@/components/ProfileCard';
+import { JapanMap } from '@/components/JapanMap';
 import { PersonalBest } from '@/components/PersonalBest';
 
 const TracksPage = lazy(() =>
@@ -54,6 +56,7 @@ function Dashboard() {
   const { dark, toggle } = useTheme();
   const { t } = useLocale();
   const [filter, setFilter] = useState<SportFilter>('all');
+  const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
   const [year, setYear] = useState<number | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
@@ -77,7 +80,15 @@ function Dashboard() {
 
   const [currentYear] = useState(() => new Date().getFullYear());
   const years = useMemo(() => getAvailableYears(activities), [activities]);
-  const filtered = useFilteredActivities(activities, filter, year);
+  const baseFiltered = useFilteredActivities(activities, filter, year);
+  const filtered = useMemo(
+    () => selectedPrefecture
+      ? baseFiltered.filter((activity) =>
+          extractProvince(activity.location_country) === selectedPrefecture
+        )
+      : baseFiltered,
+    [baseFiltered, selectedPrefecture]
+  );
   const heatmapYear = year ?? years[0] ?? currentYear;
 
   const selectActivity = useCallback(
@@ -197,6 +208,14 @@ function Dashboard() {
               {/* Right column */}
               <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
                 <ProfileCard activities={activities} filter={filter} />
+                <JapanMap
+                  activities={baseFiltered}
+                  selectedPrefecture={selectedPrefecture}
+                  onSelectPrefecture={(name) => {
+                    setSelectedPrefecture(name);
+                    setSelectedActivity(null);
+                  }}
+                />
                 <div ref={routeSectionRef} className="scroll-mt-28">
                   <RouteMap
                     activities={filtered}
