@@ -41,27 +41,98 @@ const KUDOS_DEFAULT_SETTINGS = Object.freeze([
 ]);
 
 
+// BEGIN GENERATED SPORT RULES - DO NOT EDIT
+const KUDOS_SPORT_RULES = Object.freeze({
+  "version": 1,
+  "order": [
+    "Ride",
+    "Walk",
+    "Golf"
+  ],
+  "titlePriority": [
+    "Golf",
+    "Ride",
+    "Walk"
+  ],
+  "aliases": {
+    "Ride": [
+      "ride",
+      "cycling",
+      "biking",
+      "bicycle",
+      "bike"
+    ],
+    "Walk": [
+      "walk",
+      "run",
+      "walking",
+      "running",
+      "hike",
+      "hiking",
+      "jog",
+      "jogging",
+      "trekking"
+    ],
+    "Golf": [
+      "golf"
+    ]
+  },
+  "titleKeywords": {
+    "Golf": [
+      "ゴルフ",
+      "golf"
+    ],
+    "Ride": [
+      "サイクリング",
+      "ライド",
+      "自転車",
+      "ポタリング",
+      "cycling",
+      "biking",
+      "bicycle",
+      "bike",
+      "ride"
+    ],
+    "Walk": [
+      "ハイキング",
+      "ランニング",
+      "ジョギング",
+      "ウォーキング",
+      "ウォーク",
+      "散歩",
+      "登山",
+      "トレッキング",
+      "walking",
+      "hiking",
+      "jogging",
+      "running",
+      "walk",
+      "jog",
+      "run",
+      "trekking"
+    ]
+  }
+});
+// END GENERATED SPORT RULES
+
 /**
- * Supported public activity genres. Title and explicit user override take
- * priority over GPX type hints or speed-based inference.
+ * Resolve titles and source metadata using the canonical shared rule set.
+ * Priority: explicit override > activity title > GPX/TCX inferred sport.
  */
 function kudosNormalizeSport_(value) {
-  const sport = kudosText_(value).toLowerCase();
-  if (sport === 'ride' || sport === 'cycling') return 'Ride';
-  if (sport === 'walk' || sport === 'run' || sport === 'walking' ||
-      sport === 'hike' || sport === 'running') return 'Walk';
-  if (sport === 'golf') return 'Golf';
+  const normalized = kudosText_(value).toLowerCase();
+  for (const sport of KUDOS_SPORT_RULES.order) {
+    if (KUDOS_SPORT_RULES.aliases[sport].includes(normalized)) return sport;
+  }
   return '';
 }
 
 function kudosSportFromName_(name) {
   const title = kudosText_(name).toLowerCase();
-  if (/ゴルフ|golf/.test(title)) return 'Golf';
-  if (/サイクリング|ライド|自転車|ポタリング|cycling|biking|bicycle|bike|ride/.test(title)) {
-    return 'Ride';
-  }
-  if (/ハイキング|ランニング|ジョギング|ウォーキング|ウォーク|散歩|登山|トレッキング|walking|hiking|jogging|running|walk|jog|run|trekking/.test(title)) {
-    return 'Walk';
+  for (const sport of KUDOS_SPORT_RULES.titlePriority) {
+    if (KUDOS_SPORT_RULES.titleKeywords[sport].some((keyword) => title.includes(keyword))) {
+      return sport;
+    }
   }
   return '';
 }

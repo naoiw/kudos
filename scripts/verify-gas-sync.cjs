@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const gasRoot = path.join(root, 'gas');
@@ -49,6 +50,13 @@ function collectDeployableFiles(directory, relativeDir = 'gas') {
 }
 
 try {
+  const generated = spawnSync(process.execPath,
+    [path.join(root, 'scripts/generate-sport-rules.cjs'), '--check'],
+    { cwd: root, encoding: 'utf8' });
+  if (generated.status !== 0) {
+    throw new Error('Generated sport rules differ from the canonical JSON. ' +
+      (generated.stderr || '').trim());
+  }
   assertSameFiles(collectDeployableFiles(gasRoot), 'Local deployable files');
   for (const name of sourceNames) {
     const source = fs.readFileSync(path.join(gasRoot, name), 'utf8');

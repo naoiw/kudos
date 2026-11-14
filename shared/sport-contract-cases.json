@@ -1,0 +1,202 @@
+[
+  {
+    "name": "ゴルフ場18ホール",
+    "detected": "Ride",
+    "expected": "Golf",
+    "confidence": "title"
+  },
+  {
+    "name": "Golf practice",
+    "detected": "Run",
+    "expected": "Golf",
+    "confidence": "title"
+  },
+  {
+    "name": "GOLF AND RIDE",
+    "detected": "Walk",
+    "expected": "Golf",
+    "confidence": "title"
+  },
+  {
+    "name": "ゴルフとサイクリング",
+    "detected": "Walk",
+    "expected": "Golf",
+    "confidence": "title"
+  },
+  {
+    "name": "サイクリングと散歩",
+    "detected": "Walk",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "朝のサイクリング",
+    "detected": "Run",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "多摩川ライド",
+    "detected": "Run",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": " Cycle Ride ",
+    "detected": "Run",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "BICYCLE TOUR",
+    "detected": "Run",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "ポタリング",
+    "detected": "Run",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "ハイキング",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "夕方のランニング",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "ジョギング",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "ウォーキング",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "ウォーク",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "散歩",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "登山",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "TREKKING",
+    "detected": "Ride",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": "Run",
+    "expected": "Walk",
+    "confidence": "inferred"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": " RIDE ",
+    "expected": "Ride",
+    "confidence": "inferred"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": "Golf",
+    "expected": "Golf",
+    "confidence": "inferred"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": "Biking",
+    "expected": "Ride",
+    "confidence": "inferred"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": "hiking",
+    "expected": "Walk",
+    "confidence": "inferred"
+  },
+  {
+    "name": "名前に手がかりなし",
+    "detected": "unknown",
+    "expected": "Unknown",
+    "confidence": "inferred"
+  },
+  {
+    "name": "",
+    "detected": "",
+    "expected": "Unknown",
+    "confidence": "inferred"
+  },
+  {
+    "name": "ゴルフ",
+    "detected": "Ride",
+    "override": "Walk",
+    "expected": "Walk",
+    "confidence": "override"
+  },
+  {
+    "name": "サイクリング",
+    "detected": "Ride",
+    "override": "run",
+    "expected": "Walk",
+    "confidence": "override"
+  },
+  {
+    "name": "ゴルフ",
+    "detected": "Walk",
+    "override": "  CYCLING ",
+    "expected": "Ride",
+    "confidence": "override"
+  },
+  {
+    "name": "散歩",
+    "detected": "Golf",
+    "override": "Unknown",
+    "expected": "Walk",
+    "confidence": "title"
+  },
+  {
+    "name": "案内",
+    "nameOverride": "ゴルフ",
+    "detected": "Walk",
+    "expected": "Golf",
+    "confidence": "title"
+  },
+  {
+    "name": "ゴルフ",
+    "nameOverride": "自転車",
+    "detected": "Walk",
+    "expected": "Ride",
+    "confidence": "title"
+  },
+  {
+    "name": "ゴルフ",
+    "nameOverride": "散歩",
+    "detected": "Ride",
+    "override": "Golf",
+    "expected": "Golf",
+    "confidence": "override"
+  }
+]

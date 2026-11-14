@@ -1,10 +1,11 @@
 /**
- * Canonical Kudos activity genres and display order.
- * Legacy Run activities and title-based classifications are normalized when
- * reading older published JSON, without re-uploading any GPS chunks.
+ * Shared rules live in shared/sport-rules.json and are embedded into GAS by
+ * scripts/generate-sport-rules.cjs. Never duplicate keywords in this module.
  */
-export const SPORT_ORDER = ['Ride', 'Walk', 'Golf'] as const;
-export type Sport = (typeof SPORT_ORDER)[number];
+import rules from '../../shared/sport-rules.json';
+
+export type Sport = 'Ride' | 'Walk' | 'Golf';
+export const SPORT_ORDER: readonly Sport[] = rules.order as Sport[];
 
 export const SPORT_DETAILS: Record<Sport, {
   ja: string; en: string; icon: string; color: string;
@@ -15,30 +16,47 @@ export const SPORT_DETAILS: Record<Sport, {
 };
 
 export function normalizeSport(value: string): Sport | null {
-  const sport = value.toLowerCase();
-  if (sport === 'ride' || sport === 'cycling') return 'Ride';
-  if (['walk', 'walking', 'run', 'running', 'hike'].includes(sport)) return 'Walk';
-  if (sport === 'golf') return 'Golf';
+  const normalized = String(value ?? '').trim().toLowerCase();
+  for (const sport of SPORT_ORDER) {
+    if (rules.aliases[sport].includes(normalized)) return sport;
+  }
   return null;
 }
 
 export function sportFromActivityName(name: string): Sport | null {
-  const title = name.toLowerCase();
-  if (/ゴルフ|golf/.test(title)) return 'Golf';
-  if (/サイクリング|ライド|自転車|ポタリング|cycling|biking|bicycle|bike|ride/.test(title)) {
-    return 'Ride';
-  }
-  if (/ハイキング|ランニング|ジョギング|ウォーキング|ウォーク|散歩|登山|トレッキング|walking|hiking|jogging|running|walk|jog|run|trekking/.test(title)) {
-    return 'Walk';
+  const title = String(name ?? '').trim().toLowerCase();
+  for (const sport of rules.titlePriority as Sport[]) {
+    if (rules.titleKeywords[sport].some((keyword) => title.includes(keyword))) {
+      return sport;
+    }
   }
   return null;
 }
 
+export type SportConfidence = 'override' | 'title' | 'inferred';
+
+/** Mirrors kudosResolveSport_ in the GAS project. */
+export function resolveSportClassification(
+  name: string,
+  detected: string,
+  override = ''
+): { sport: Sport | 'Unknown'; confidence: SportConfidence } {
+  const explicit = normalizeSport(override);
+  if (explicit) return { sport: explicit, confidence: 'override' };
+  const fromName = sportFromActivityName(name);
+  if (fromName) return { sport: fromName, confidence: 'title' };
+  return { sport: normalizeSport(detected) ?? 'Unknown', confidence: 'inferred' };
+}
+
+/**
+ * Old published JSON lacks genre_version and needs title-based inference.
+ * New GAS exports have already applied sport_override; trust their type.
+ * Keep this behavior so a manual override cannot be lost in the browser.
+ */
 export function resolveActivitySport(name: string, type: string, trusted = false): Sport | null {
-  const normalized = normalizeSport(type);
-  // New GAS exports have already applied sport_override, so trust their result.
-  if (trusted) return normalized;
-  return sportFromActivityName(name) ?? normalized;
+  if (trusted) return normalizeSport(type);
+  const resolved = resolveSportClassification(name, type).sport;
+  return resolved === 'Unknown' ? null : resolved;
 }
 
 export function sportLabel(type: string, locale: 'ja' | 'en' = 'ja'): string {
