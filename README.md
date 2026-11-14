@@ -10,7 +10,7 @@
 - [x] 日本語UI、英語のソースコードコメント
 - [x] GitHub Pages のプロジェクトパス `/kudos/` 対応
 - [x] 架空のサンプルデータ（実際のGPS・個人情報は含まない）
-- [ ] Google Drive + Apps ScriptでGPX/TCXを同期
+- [x] Google Drive + Apps ScriptのGPX/TCX取り込みコード（実際のDrive・Sheetsへの設定と稼働は未完了）
 - [ ] ユーザー別データの読み込みとページ切替
 - [ ] Google認証とユーザー単位の閲覧制限
 - [ ] 公開経路のプライバシーフィルター
@@ -63,3 +63,9 @@ GitHubリポジトリの **Settings → Pages → Build and deployment → Sourc
 - 将来対応予定：GPXの経路が通過した複数都道府県の自動集計
 
 ルートマップの背景タイルはライト・ダークの両モードでグレースケール化します。経路色は種目に応じて残します。
+
+## GPX/TCX取り込み基盤（Apps Script）
+
+複数人のGoogle Driveフォルダを巡回して、1アクティビティ1行で非公開Google Sheetsへ取り込む仕組みを `gas/` に追加しています。初期セットアップと設定方法は [gas/README.md](gas/README.md) を参照してください。
+
+**公開中のWebページは引き続きサンプルデータのみ**を使用しており、個人GPS記録は自動公開されません。

@@ -176,7 +176,8 @@ function syncAllActivities() {
             throw error;
           }
 
-          const bytes = file.getBlob().getBytes();
+          const blob = file.getBlob();
+          const bytes = blob.getBytes();
           const digest = kudosSha256_(bytes);
           base.source_hash = digest;
 
@@ -187,7 +188,7 @@ function syncAllActivities() {
             stats.files_duplicate++;
           } else {
             // File name and extension are not used for format identification.
-            const xml = file.getBlob().getDataAsString('UTF-8');
+            const xml = blob.getDataAsString('UTF-8');
             const parsed = kudosParseActivity_(xml, settings);
             const previousActivity = activityIndex.get(key) || null;
 

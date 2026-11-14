@@ -239,7 +239,7 @@ function kudosAnalyzeSegments_(input, settings) {
             moving += delta;
           }
           if (prev.ele !== null && point.ele !== null &&
-              meters > 3 && point.ele - prev.ele > 3 &&
+              meters > 3 && point.ele - prev.ele >= 3 &&
               point.ele - prev.ele < 50) {
             gain += point.ele - prev.ele;
           }

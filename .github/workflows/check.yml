@@ -20,3 +20,6 @@ jobs:
         env:
           PATH_PREFIX: /kudos
         run: pnpm build
+
+      - name: Test Apps Script parser and multi-user ingestion
+        run: node --test gas/tests/*.test.cjs

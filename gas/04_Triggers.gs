@@ -24,6 +24,7 @@ function installSyncTriggers() {
   for (const day of [ScriptApp.WeekDay.SATURDAY, ScriptApp.WeekDay.SUNDAY]) {
     ScriptApp.newTrigger(functionName)
       .timeBased()
+      .everyWeeks(1)
       .onWeekDay(day)
       .atHour(13)
       .inTimezone(KUDOS_TIMEZONE)
