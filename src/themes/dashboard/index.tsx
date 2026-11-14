@@ -13,7 +13,7 @@ import {
   useFilteredActivities,
   extractProvince,
   getAvailableYears,
-  getActivityData,
+  getActivityCatalog,
 } from '@/hooks/useActivities';
 import { useTheme } from '@/hooks/useTheme';
 import { useLocale } from '@/hooks/useLocale';
@@ -52,7 +52,17 @@ const pageFromPath = (): Page =>
 
 function Dashboard() {
   const routeSectionRef = useRef<HTMLDivElement>(null);
-  const activities = getActivityData() as Activity[];
+  const catalog = getActivityCatalog();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get('u')
+  );
+  const currentUser =
+    catalog.users.find((user) => user.user_id === selectedUserId) ||
+    catalog.users[0];
+  const activities = useMemo(
+    () => catalog.activities.filter((activity) => activity.user_id === currentUser.user_id),
+    [catalog, currentUser]
+  );
   const { dark, toggle } = useTheme();
   const { t } = useLocale();
   const [filter, setFilter] = useState<SportFilter>('all');
@@ -68,11 +78,21 @@ function Dashboard() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+  const chooseUser = (userId: string) => {
+    setSelectedUserId(userId);
+    setSelectedActivity(null);
+    setSelectedPrefecture(null);
+    setYear(null);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('u', userId);
+    window.history.replaceState(null, '', nextUrl);
+  };
+
   const navigate = (next: Page) => {
     window.history.pushState(
       null,
       '',
-      `${import.meta.env.BASE_URL}${next === 'home' ? '' : next}`
+      `${import.meta.env.BASE_URL}${next === 'home' ? '' : next}${window.location.search}`
     );
     setPage(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -130,7 +150,27 @@ function Dashboard() {
         onNavigate={navigate}
       />
 
-      <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 pt-4 sm:px-6" role="group" aria-label="種目で絞り込み">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-6">
+        <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+          <span className="text-[var(--color-muted)]">表示ユーザー</span>
+          <select
+            aria-label="表示するユーザー"
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-[var(--color-text)]"
+            value={currentUser.user_id}
+            onChange={(event) => chooseUser(event.target.value)}
+          >
+            {catalog.users.map((user) => (
+              <option key={user.user_id} value={user.user_id}>{user.display_name}</option>
+            ))}
+          </select>
+        </label>
+        <span className="text-xs text-[var(--color-muted)]">
+          {catalog.mode === 'public-preview'
+            ? `公開用の統計データ · ${catalog.datePrecision === 'month' ? '日付は月単位に匿名化' : '公開承認済み'}`
+            : '架空のデモデータ'}
+        </span>
+      </div>
+      <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 pt-3 sm:px-6" role="group" aria-label="種目で絞り込み">
         {([['all', 'すべて'], ['Run', 'ランニング'], ['Ride', 'サイクリング']] as const).map(([value, label]) => (
           <button key={value} type="button" aria-pressed={filter === value}
             onClick={() => { setFilter(value); setSelectedActivity(null); }}
@@ -141,7 +181,9 @@ function Dashboard() {
       </div>
 
       <div className="mx-auto max-w-[1400px] px-4 pt-3 text-xs text-[var(--color-muted)] sm:px-6" role="note">
-        デモ表示：掲載中のアクティビティとGPS経路は架空のサンプルデータです。
+        {catalog.mode === 'public-preview'
+          ? '統計プレビュー：GPS経路・氏名・メールアドレス・正確な所在地は公開していません。'
+          : 'デモ表示：掲載中のアクティビティとGPS経路は架空のサンプルデータです。'}
       </div>
       <Suspense
         fallback={

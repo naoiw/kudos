@@ -1,2 +1,2 @@
-// 桥接文件：从 core 重新导出，保持旧路径向后兼容
+// Re-export the shared activity and public preview loader for compatibility.
 export * from '../core/hooks/useActivities';

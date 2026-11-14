@@ -120,40 +120,120 @@ export function getAvailableYears(activities: Activity[]): number[] {
   return Array.from(years).sort((a, b) => b - a);
 }
 
-// Async data loading (fetch-based, compatible with Suspense)
+// Load the explicitly approved public statistics preview from GitHub Pages.
+// When the preview is empty or has not been published, keep synthetic demo data.
 import activitiesUrl from '@/static/activities.json?url';
 
-let activityDataCache: Activity[] | null = null;
-let activityDataError: unknown = null;
-let activityDataPromise: Promise<Activity[]> | null = null;
+export interface PublicPreviewUser {
+  user_id: string;
+  display_name: string;
+}
 
-const loadActivityData = () => {
-  activityDataPromise ??= fetch(activitiesUrl)
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`Failed to load activities: ${response.status}`);
-      return response.json() as Promise<Activity[]>;
-    })
-    .then((data) => {
-      activityDataCache = data;
-      return data;
+export interface ActivityCatalog {
+  users: PublicPreviewUser[];
+  activities: Activity[];
+  mode: 'demo' | 'public-preview';
+  generatedAt: string | null;
+  datePrecision: 'month' | 'exact' | null;
+}
+
+interface PreviewDocument {
+  schema_version: number;
+  mode: string;
+  generated_at: string;
+  date_precision?: 'month' | 'exact';
+  users: PublicPreviewUser[];
+  activities: Activity[];
+}
+
+let catalogCache: ActivityCatalog | null = null;
+let catalogError: unknown = null;
+let catalogPromise: Promise<ActivityCatalog> | null = null;
+
+async function loadCatalog(): Promise<ActivityCatalog> {
+  const previewUrl = `${import.meta.env.BASE_URL}data/preview.json`;
+  try {
+    const response = await fetch(previewUrl, { cache: 'no-store' });
+    if (response.ok) {
+      const candidate: unknown = await response.json();
+      if (candidate && typeof candidate === 'object') {
+        const doc = candidate as PreviewDocument;
+        if (
+          doc.schema_version === 1 &&
+          doc.mode === 'public-stats-preview' &&
+          Array.isArray(doc.users) &&
+          doc.users.length > 0 &&
+          Array.isArray(doc.activities)
+        ) {
+          const users = doc.users.filter(
+            (user) =>
+              typeof user.user_id === 'string' &&
+              /^[a-z0-9][a-z0-9_-]{0,30}$/.test(user.user_id) &&
+              typeof user.display_name === 'string'
+          );
+          const userIds = new Set(users.map((user) => user.user_id));
+          if (users.length) {
+            const activities = doc.activities.filter(
+              (activity) =>
+                userIds.has(activity.user_id || '') &&
+                (activity.type === 'Run' || activity.type === 'Ride') &&
+                typeof activity.distance === 'number' &&
+                typeof activity.start_date_local === 'string'
+            );
+            return {
+              users,
+              activities,
+              mode: 'public-preview',
+              generatedAt: doc.generated_at || null,
+              datePrecision: doc.date_precision || null,
+            };
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Public preview unavailable; using synthetic demo:', error);
+  }
+
+  const response = await fetch(activitiesUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to load demo activities: ${response.status}`);
+  }
+  const activities = (await response.json()) as Activity[];
+  return {
+    users: [{ user_id: 'demo', display_name: '架空デモ' }],
+    activities: activities.map((activity) => ({
+      ...activity,
+      user_id: 'demo',
+    })),
+    mode: 'demo',
+    generatedAt: null,
+    datePrecision: null,
+  };
+}
+
+function requireCatalog() {
+  if (catalogError) throw catalogError;
+  if (catalogCache) return catalogCache;
+  catalogPromise ??= loadCatalog()
+    .then((catalog) => {
+      catalogCache = catalog;
+      return catalog;
     })
     .catch((error: unknown) => {
-      activityDataError = error;
+      catalogError = error;
       throw error;
     });
-  return activityDataPromise;
-};
+  throw catalogPromise;
+}
 
-export const getActivityData = () => {
-  if (activityDataError) throw activityDataError;
-  if (activityDataCache) return activityDataCache;
-  throw loadActivityData();
-};
+export const getActivityCatalog = (): ActivityCatalog => requireCatalog();
 
-// Reset the module-level cache so an ErrorBoundary can retry after a fetch failure
+// Legacy helper retained for modules still using the single-user API.
+export const getActivityData = (): Activity[] => requireCatalog().activities;
+
 export function resetActivityData() {
-  activityDataCache = null;
-  activityDataError = null;
-  activityDataPromise = null;
+  catalogCache = null;
+  catalogError = null;
+  catalogPromise = null;
 }
