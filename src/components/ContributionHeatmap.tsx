@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { exportCard } from '../utils/exportCard';
 import type { Activity, SportFilter } from '../types';
+import { SPORT_ORDER } from '../core/sports';
 import {
   getAvailableYears,
   formatDistance,
@@ -22,17 +23,17 @@ interface HeatmapProps {
 }
 
 // Map any activity type to the 4 display categories
-function toDisplayType(type: string): 'Run' | 'Ride' | 'Hike' | 'Training' {
-  if (type === 'Run') return 'Run';
+function toDisplayType(type: string): 'Walk' | 'Ride' | 'Golf' | 'Training' {
+  if (type === 'Walk') return 'Walk';
   if (type === 'Ride') return 'Ride';
-  if (type === 'Hike') return 'Hike';
+  if (type === 'Golf') return 'Golf';
   return 'Training';
 }
 
 const TYPE_PALETTES: Record<string, string[]> = {
-  Run: ['#fed7aa', '#fb923c', '#f97316', '#ea580c'],
+  Walk: ['#fed7aa', '#fb923c', '#f97316', '#ea580c'],
   Ride: ['#bfdbfe', '#60a5fa', '#3b82f6', '#2563eb'],
-  Hike: ['#bbf7d0', '#4ade80', '#22c55e', '#16a34a'],
+  Golf: ['#bbf7d0', '#4ade80', '#22c55e', '#16a34a'],
   Training: ['#fce7f3', '#f9a8d4', '#ec4899', '#db2777'],
 };
 
@@ -42,9 +43,9 @@ function getColor(distance: number, max: number, filter: SportFilter): string {
   const level = Math.ceil(Math.min(distance / max, 1) * 4);
   const colors: Record<string, string[]> = {
     all: ['#eef2bd', '#dce68a', '#b7c64b', '#879629'],
-    Run: TYPE_PALETTES.Run,
+    Walk: TYPE_PALETTES.Walk,
     Ride: TYPE_PALETTES.Ride,
-    Hike: TYPE_PALETTES.Hike,
+    Golf: TYPE_PALETTES.Golf,
     Gym: ['#cffafe', '#67e8f9', '#0891b2', '#155e75'],
   };
   const palette = colors[filter] ?? colors.all;
@@ -61,9 +62,9 @@ function getColorAll(typeRatio: number, displayType: string): string {
 
 function typeLabel(type: string, locale: string): string {
   const map: Record<string, { ja: string; en: string }> = {
-    Run: { ja: 'ランニング', en: 'Run' },
-    Ride: { ja: 'サイクリング', en: 'Ride' },
-    Hike: { ja: 'ハイキング', en: 'Hike' },
+    Walk: { ja: 'ウォーキング', en: 'Walking' },
+    Ride: { ja: 'サイクリング', en: 'Cycling' },
+    Golf: { ja: 'ゴルフ', en: 'Golf' },
     Training: { ja: 'トレーニング', en: 'Training' },
     WeightTraining: { ja: '筋力トレーニング', en: 'Weight Training' },
     Workout: { ja: '総合トレーニング', en: 'Workout' },
@@ -76,7 +77,7 @@ function typeLabel(type: string, locale: string): string {
 // Dominant display type for a day (by distance; Training is fallback)
 function dominantDisplayType(
   acts: Activity[]
-): 'Run' | 'Ride' | 'Hike' | 'Training' {
+): 'Walk' | 'Ride' | 'Golf' | 'Training' {
   if (acts.length === 0) return 'Training';
   const sorted = [...acts].sort((a, b) => b.distance - a.distance);
   return toDisplayType(sorted[0].type);
@@ -97,7 +98,7 @@ function buildYearGrid(
     (s, a) => s + parseMovingTime(a.moving_time),
     0
   );
-  const runs = yearActivities.filter((a) => a.type === 'Run');
+  const runs = yearActivities.filter((a) => a.type === 'Walk');
   // Average pace as distance-weighted mean speed (totalDistance / totalTime),
   // not an arithmetic mean of per-run speeds. M5 fix.
   const runDistance = runs.reduce((s, a) => s + a.distance, 0);
@@ -126,9 +127,9 @@ function buildYearGrid(
   // Per-type max (for "all" mode per-type intensity)
   // Training uses time (seconds), others use distance
   const typeMaxMap: Record<string, number> = {
-    Run: 1,
+    Walk: 1,
     Ride: 1,
-    Hike: 1,
+    Golf: 1,
     Training: 1,
   };
   if (isAll) {
@@ -270,7 +271,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
         )
         .map((a) => toDisplayType(a.type))
     );
-    return (['Run', 'Ride', 'Training'] as const).filter((t) => types.has(t));
+    return ([...SPORT_ORDER, 'Training'] as const).filter((t) => types.has(t));
   }, [activities, selectedYear, isAll]);
 
   // Gym: monthly session breakdown
@@ -294,10 +295,10 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
   };
 
   const heatmapTitle =
-    filter === 'Run'
+    filter === 'Walk'
       ? locale === 'ja'
-        ? 'ランニングヒートマップ'
-        : 'Run Heatmap'
+        ? 'ウォーキングヒートマップ'
+        : 'Walking Heatmap'
       : t('heatmapTitle');
 
   const handleSelectYear = (yr: number | 'all') => {
@@ -830,7 +831,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                   {formatDistance(yearData[0].stats.distance)} km
                 </span>
               )}
-              {filter === 'Run' && yearData[0].stats.pace > 0 && (
+              {filter === 'Walk' && yearData[0].stats.pace > 0 && (
                 <span className="flex items-center gap-1 font-mono">
                   <svg
                     className="h-3.5 w-3.5"
