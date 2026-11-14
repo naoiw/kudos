@@ -15,6 +15,7 @@ const files = [
   'gas/03_Sync.gs',
   'gas/04_Triggers.gs',
   'gas/05_PublicPreview.gs',
+  'gas/05_PublicPreview.gs',
 ];
 
 class Element {
@@ -389,4 +390,92 @@ test('public preview rejects publishing disabled users', () => {
     }),
     /not enabled/
   );
+});
+
+test('public preview replaces user details, titles and GPS with anonymous stats', () => {
+  const { evaluate } = createFixture();
+  const privateUsers = [
+    {
+      user_id: 'private_account',
+      display_name: 'Real Person',
+      email: 'private@example.org',
+      drive_folder_id: 'private-folder',
+      timezone: 'Asia/Tokyo',
+      enabled: true,
+    },
+  ];
+  const privateActivities = [{
+    activity_id: 'private-activity-id',
+    run_id: 123,
+    user_id: 'private_account',
+    drive_file_id: 'file-123',
+    filename: 'my-home-track.gpx',
+    source_hash: 'secret-checksum',
+    name: 'My private home route',
+    name_override: 'Doctor visit',
+    sport_final: 'Ride',
+    review_status: 'ok',
+    distance_m: 78057,
+    moving_time_s: 7203,
+    elevation_gain_m: 122,
+    average_hr_bpm: 155,
+    start_at_utc: '2022-07-22T23:30:00.000Z',
+    prefecture_override: '東京都',
+    route_visibility: 'route',
+    summary_polyline: 'SECRET_GPS',
+  }];
+  const obj = evaluate('kudosBuildPublicPreview_(_users, _acts, _approved, "month", _now)', {
+    _users: privateUsers,
+    _acts: privateActivities,
+    _approved: ['private_account'],
+    _now: '2026-11-14T12:00:00Z',
+  });
+  assert.equal(obj.mode, 'public-stats-preview');
+  assert.equal(obj.users[0].user_id, 'u01');
+  assert.equal(obj.users[0].display_name, 'ユーザー 1');
+  assert.equal(obj.activities.length, 1);
+  const activity = obj.activities[0];
+  assert.equal(activity.type, 'Ride');
+  assert.equal(activity.name, 'サイクリング');
+  assert.equal(activity.user_id, 'u01');
+  assert.equal(activity.distance, 78100);
+  assert.equal(activity.summary_polyline, null);
+  assert.equal(activity.location_country, null);
+  assert.equal(activity.average_heartrate, null);
+  assert.equal(activity.start_date_local.slice(0, 7), '2022-07');
+  assert.ok(activity.start_date_local.endsWith('T12:00:00'));
+  const json = JSON.stringify(obj);
+  for (const marker of [
+    'private_account', 'Real Person', 'private@example.org',
+    'private-folder', 'private-activity-id', 'file-123',
+    'my-home-track', 'secret-checksum', 'private home route',
+    'Doctor visit', '東京都', 'SECRET_GPS',
+  ]) {
+    assert.equal(json.includes(marker), false, marker + ' must not be exported');
+  }
+});
+
+test('public export defaults to disabled and requires an allowlist', () => {
+  const { evaluate, ss } = createFixture();
+  evaluate('setupSheets()');
+  assert.throws(() => evaluate('kudosPreparePublicPreview_()'), /Public preview is disabled/);
+  const settings = ss.getSheetByName('Settings');
+  const rows = settings.rows;
+  const approval = rows.findIndex((r) => r[0] === 'public_preview_export_approval');
+  assert.ok(approval >= 0);
+  settings.getRange(approval + 1, 2).setValue('I_APPROVE_PUBLIC_STATS');
+  assert.throws(() => evaluate('kudosPreparePublicPreview_()'), /public_preview_user_ids/);
+});
+
+test('unknown sport and activities needing review are omitted', () => {
+  const { evaluate } = createFixture();
+  const users = [{ user_id: 'u1', enabled: true, timezone: 'Asia/Tokyo' }];
+  const acts = [
+    { user_id: 'u1', review_status: 'needs_review', sport_final: 'Ride', start_at_utc: '2026-11-01T00:00:00Z', distance_m: 1000, moving_time_s: 300 },
+    { user_id: 'u1', review_status: 'ok', sport_final: 'Unknown', start_at_utc: '2026-11-01T00:00:00Z', distance_m: 1000, moving_time_s: 300 },
+  ];
+  const p = evaluate('kudosBuildPublicPreview_(_users, _acts, ["u1"], "month", "now")', {
+    _users: users, _acts: acts,
+  });
+  assert.equal(p.activities.length, 0);
 });
