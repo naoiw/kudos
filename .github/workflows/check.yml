@@ -36,3 +36,19 @@ jobs:
           node -e "require('node:fs').writeFileSync('.clasp.json', JSON.stringify({scriptId: '1'.repeat(57), rootDir: 'gas'}))"
           npx --yes @google/clasp@3.4.1 show-file-status --json > "$RUNNER_TEMP/clasp-file-status.json"
           node scripts/verify-gas-sync.cjs "$RUNNER_TEMP/clasp-file-status.json"
+
+  windows-sport-rules:
+    runs-on: windows-latest
+    steps:
+      - name: Enable Windows Git CRLF checkout
+        run: git config --global core.autocrlf true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify CRLF checkout and generated GAS rules
+        shell: pwsh
+        run: |
+          node -e "const f=require('fs').readFileSync('gas/00_Config.gs','utf8'); if(!f.includes('\r\n')) process.exit(1)"
+          node scripts/verify-gas-sync.cjs
+          node --test scripts/tests/generate-sport-rules.test.cjs
