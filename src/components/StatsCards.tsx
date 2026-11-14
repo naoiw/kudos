@@ -36,8 +36,13 @@ export const StatsCards = memo(function StatsCards({
   const weekGoalMins = goal.unit === 'time' ? goal.weekly : 0;
 
   // Current year stats (for yearly goal)
-  const [now] = useState(() => new Date());
-  const currentYear = year ?? now.getFullYear();
+  const [today] = useState(() => new Date());
+  const currentYear = year ?? today.getFullYear();
+  // Historical years use the same month/day as today for consistent comparisons.
+  const now = year === null || year === today.getFullYear()
+    ? today
+    : new Date(year, today.getMonth(), today.getDate(),
+        today.getHours(), today.getMinutes());
   const yearActivities = activities.filter((a) => {
     return Number(a.start_date_local.slice(0, 4)) === currentYear;
   });
@@ -75,8 +80,7 @@ export const StatsCards = memo(function StatsCards({
       ? yearSeconds - lastYearSeconds
       : yearDistance - lastYearDistance;
 
-  // Current month stats — always reflects the current calendar month,
-  // independent of the year selected for the yearly card (H2 fix).
+  // The monthly card follows the selected year (same calendar month).
   const monthActivities = allActivities.filter((a) => {
     if (a.start_date_local.slice(0, 7) !==
         `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
@@ -122,7 +126,7 @@ export const StatsCards = memo(function StatsCards({
   weekStart.setHours(0, 0, 0, 0);
   const weekActivities = allActivities.filter((a) => {
     const d = new Date(a.start_date_local);
-    if (d < weekStart) return false;
+    if (d < weekStart || d > now) return false;
     if (filter !== 'all' && a.type !== filter) return false;
     return true;
   });
@@ -346,7 +350,7 @@ export const StatsCards = memo(function StatsCards({
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          {t('yearlyGoal')}
+          {t('yearlyGoal')} ({currentYear})
         </p>
         <p className="font-mono text-3xl font-bold whitespace-nowrap">
           {goal.unit === 'time'
@@ -413,7 +417,7 @@ export const StatsCards = memo(function StatsCards({
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          {t('monthlyGoal')}
+          {t('monthlyGoal')} ({currentYear}/{now.getMonth() + 1})
         </p>
         <p className="font-mono text-3xl font-bold whitespace-nowrap">
           {goal.unit === 'time'

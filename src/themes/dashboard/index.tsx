@@ -76,7 +76,7 @@ function Dashboard() {
     [catalog, currentUser]
   );
   const { dark, toggle } = useTheme();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [filter, setFilter] = useState<SportFilter>('all');
   const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
   const [year, setYear] = useState<number | null>(null);
@@ -136,6 +136,7 @@ function Dashboard() {
 
   const [currentYear] = useState(() => new Date().getFullYear());
   const years = useMemo(() => getAvailableYears(activities), [activities]);
+  const yearFiltered = useFilteredActivities(activities, 'all', year);
   const baseFiltered = useFilteredActivities(activities, filter, year);
   const filtered = useMemo(
     () => selectedPrefecture
@@ -145,7 +146,6 @@ function Dashboard() {
       : baseFiltered,
     [baseFiltered, selectedPrefecture]
   );
-  const heatmapYear = year ?? years[0] ?? currentYear;
 
   const selectActivity = useCallback(
     (activity: Activity | null) => {
@@ -223,6 +223,34 @@ function Dashboard() {
           {editingGoals ? '目標設定を閉じる' : '目標設定'}
         </button>
       </div>
+      {/* One year selection controls every activity widget and page. */}
+      <div
+        className="mx-auto max-w-[1400px] overflow-x-auto px-4 pt-3 sm:px-6"
+        role="group"
+        aria-label={locale === 'ja' ? '表示する年' : 'Activity year'}
+      >
+        <div className="flex min-w-max items-center gap-2 pb-1">
+          <span className="mr-1 text-sm text-[var(--color-muted)]">{locale === 'ja' ? '年' : 'Year'}</span>
+          {[null, ...years].map((value) => (
+            <button
+              key={value ?? 'all'}
+              type="button"
+              aria-pressed={year === value}
+              onClick={() => {
+                setYear(value);
+                setSelectedActivity(null);
+                setSelectedPrefecture(null);
+              }}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${year === value
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
+                : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
+            >
+              {value ?? (locale === 'ja' ? 'すべての年' : 'All years')}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {editingGoals && (
         <div className="px-4 sm:px-6">
           <GoalSettings
@@ -252,17 +280,19 @@ function Dashboard() {
       >
         {page === 'summary' ? (
           <SummaryPage
+            key={`${year ?? 'all'}-${filter}`}
             datePrecision={catalog.datePrecision}
-            activities={activities}
+            activities={baseFiltered}
             onSelectActivity={(activity) => {
               navigate('home');
-              setYear(null);
               selectActivity(activity);
             }}
           />
         ) : page === 'tracks' ? (
           <TracksPage
-            activities={activities}
+            key={`${year ?? 'all'}-${filter}`}
+            year={year}
+            activities={baseFiltered}
             dark={dark}
             filter={filter}
             onSelectActivity={selectActivity}
@@ -287,8 +317,9 @@ function Dashboard() {
                 />
                 {catalog.datePrecision !== 'month' && (
                   <ContributionHeatmap
-                    activities={activities}
-                    year={heatmapYear}
+                    key={`${year ?? 'all'}-${filter}`}
+                    activities={baseFiltered}
+                    year={year}
                     filter={filter}
                     onSelectActivity={selectActivity}
                   />
@@ -296,12 +327,6 @@ function Dashboard() {
                 <ActivityLog
                   datePrecision={catalog.datePrecision}
                   activities={filtered}
-                  years={years}
-                  year={year}
-                  setYear={(value) => {
-                    setYear(value);
-                    setSelectedActivity(null);
-                              }}
                   selectedActivity={selectedActivity}
                   onSelectActivity={selectActivity}
                   filter={filter}
@@ -310,7 +335,7 @@ function Dashboard() {
 
               {/* Right column */}
               <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
-                <ProfileCard activities={activities} filter={filter} />
+                <ProfileCard activities={yearFiltered} filter={filter} />
                 <JapanMap
                   activities={baseFiltered}
                   selectedPrefecture={selectedPrefecture}
@@ -323,7 +348,7 @@ function Dashboard() {
                   <RouteMap
                     focusedPrefecture={selectedPrefecture}
                     activities={filtered}
-                    allActivities={activities}
+                    allActivities={baseFiltered}
                     selectedActivity={selectedActivity}
                     dark={dark}
                     onClearSelection={() => setSelectedActivity(null)}
@@ -331,7 +356,8 @@ function Dashboard() {
                 </div>
                 {catalog.datePrecision !== 'month' && (
                   <CalendarWidget
-                    key={year ?? 'all'}
+                    key={`${year ?? 'all'}-${filter}-${selectedPrefecture ?? 'all'}`}
+                    yearFilter={year}
                     selectedActivity={selectedActivity}
                     activities={filtered}
                     onSelectActivity={selectActivity}

@@ -11,11 +11,9 @@ import {
 import type { Activity } from '../types';
 import type { DatePrecision } from '../core/datePrecision';
 import { useLocale } from '../hooks/useLocale';
-import { SPORT_ORDER, sportLabel } from '../core/sports';
 import { formatPace } from '../hooks/useActivities';
 import {
   groupSummary,
-  summaryKey,
   summarize,
   summaryChart,
   type SummaryPeriod,
@@ -210,31 +208,10 @@ export function SummaryPage({
   const isJapanese = locale === 'ja';
   const monthOnly = datePrecision === 'month';
   const [period, setPeriod] = useState<SummaryPeriod>('month');
-  const [sport, setSport] = useState('all');
-  const [year, setYear] = useState('all');
   const [limit, setLimit] = useState(12);
-  const sports = useMemo(
-    () => SPORT_ORDER.filter((kind) => activities.some((a) => a.type === kind)),
-    [activities]
-  );
-  const years = useMemo(
-    () =>
-      [...new Set(activities.map((a) => a.start_date_local.slice(0, 4)))]
-        .sort()
-        .reverse(),
-    [activities]
-  );
   const groups = useMemo(
-    () =>
-      groupSummary(
-        activities.filter(
-          (a) =>
-            (sport === 'all' || a.type === sport) &&
-            (year === 'all' || summaryKeyYear(a, period) === year)
-        ),
-        period
-      ),
-    [activities, sport, year, period]
+    () => groupSummary(activities, period),
+    [activities, period]
   );
   const periods: [SummaryPeriod, string][] = monthOnly
     ? [
@@ -260,44 +237,7 @@ export function SummaryPage({
               : 'Your activity history, one period at a time.'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <label className="text-xs text-[var(--color-muted)]">
-            {isJapanese ? '種目' : 'Sport'}
-            <select
-              aria-label={isJapanese ? '種目' : 'Sport'}
-              className={`${control} ml-2`}
-              value={sport}
-              onChange={(e) => {
-                setSport(e.target.value);
-                setLimit(12);
-              }}
-            >
-              <option value="all">{isJapanese ? 'すべての種目' : 'All sports'}</option>
-              {sports.map((s) => (
-                <option key={s} value={s}>
-                  {sportLabel(s, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-[var(--color-muted)]">
-            {isJapanese ? '年' : 'Year'}
-            <select
-              aria-label={isJapanese ? '集計対象の年' : 'Summary year'}
-              className={`${control} ml-2`}
-              value={year}
-              onChange={(e) => {
-                setYear(e.target.value);
-                setLimit(12);
-              }}
-            >
-              <option value="all">{isJapanese ? 'すべての年' : 'All years'}</option>
-              {years.map((y) => (
-                <option key={y}>{y}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+
       </div>
       {monthOnly && <p className="mb-4 text-sm text-[var(--color-muted)]" role="note">
         {isJapanese ? '活動日時は年月のみ公開されています。日・週別集計は表示しません。'
@@ -364,10 +304,3 @@ export function SummaryPage({
   );
 }
 
-function summaryKeyYear(activity: Activity, period: SummaryPeriod) {
-  // Weekly filters use the ISO week-year, including dates across New Year.
-  return summaryKey(
-    activity.start_date_local,
-    period === 'week' ? 'week' : 'year'
-  ).slice(0, 4);
-}
