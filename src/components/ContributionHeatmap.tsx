@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState } from 'react';
 import { exportCard } from '../utils/exportCard';
 import type { Activity, SportFilter } from '../types';
 import { SPORT_ORDER } from '../core/sports';
+import { mondayFirstWeekdayIndex } from '../core/heatmapWeek';
 import {
   getAvailableYears,
   formatDistance,
@@ -12,7 +13,7 @@ import { useLocale } from '../hooks/useLocale';
 
 // One week column: h-3/w-3 cell (12px) + gap-[3px]
 const HEATMAP_WEEK_WIDTH = 15;
-const weekdayIds = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const weekdayIds = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 interface HeatmapProps {
   activities: Activity[];
@@ -145,7 +146,7 @@ function buildYearGrid(
   const maxVal = Math.max(...dayMap.values(), 1);
 
   const startDate = new Date(yr, 0, 1);
-  const startDay = startDate.getDay();
+  const startDay = mondayFirstWeekdayIndex(startDate.getDay());
   const grid: {
     date: string;
     distance: number;
@@ -236,8 +237,8 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
 
   const dayLabels =
     locale === 'ja'
-      ? ['', '月', '', '水', '', '金', '']
-      : ['', 'M', '', 'W', '', 'F', ''];
+      ? ['月', '', '水', '', '金', '', '']
+      : ['M', '', 'W', '', 'F', '', ''];
 
   // Which display types are present this year
   const presentDisplayTypes = useMemo(() => {
@@ -466,7 +467,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
               </div>
               {grid.map((week, weekIdx) => (
                 <div key={week[0].date} className="flex flex-col gap-[3px]">
-                  {/* The first week may start mid-week; pad so days land on their weekday row */}
+                  {/* Monday is the first row; pad only the days before January 1. */}
                   {weekIdx === 0 &&
                     Array.from({ length: 7 - week.length }, (_, i) => (
                       <div key={`pad-${i}`} className="h-3 w-3 shrink-0" />
