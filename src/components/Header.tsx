@@ -1,6 +1,6 @@
 import { useLocale } from '../hooks/useLocale';
 
-type Page = 'home' | 'tracks' | 'summary';
+type Page = 'home' | 'tracks' | 'summary' | 'compare';
 
 interface HeaderProps {
   dark: boolean;
@@ -15,6 +15,7 @@ export function Header({ dark, toggleTheme, page, onNavigate }: HeaderProps) {
     { label: t('home'), page: 'home' },
     { label: t('tracks'), page: 'tracks' },
     { label: t('summary'), page: 'summary' },
+    { label: t('compare'), page: 'compare' },
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-md">
