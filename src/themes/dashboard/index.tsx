@@ -95,6 +95,12 @@ function Dashboard() {
   );
   // Keep the exact target month when calendar arrows cross a year boundary.
   const [calendarNavigationMonth, setCalendarNavigationMonth] = useState<Date | null>(null);
+  const clearSelection = useCallback(() => {
+    setSelectedActivity(null);
+    setSelectedPrefecture(null);
+    setSelectedCountry(null);
+  }, []);
+
   const [page, setPage] = useState<Page>(pageFromPath);
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('life');
   const [editingGoals, setEditingGoals] = useState(false);
@@ -129,14 +135,12 @@ function Dashboard() {
       if (nextPage === 'summary') {
         setSummaryPeriod('life');
         setYear(null);
-        setSelectedActivity(null);
-        setSelectedPrefecture(null);
-        setSelectedCountry(null);
+        clearSelection();
       }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  }, [clearSelection]);
   const chooseUser = (userId: string) => {
     const userActivities = catalog.activities.filter((activity) =>
       activity.user_id === userId
@@ -144,9 +148,7 @@ function Dashboard() {
     setSelectedUserId(userId);
     setCalendarNavigationMonth(null);
     setFilter('all');
-    setSelectedActivity(null);
-    setSelectedPrefecture(null);
-    setSelectedCountry(null);
+    clearSelection();
     setYear(
       page === 'summary' && summaryPeriod === 'life'
         ? null
@@ -162,9 +164,7 @@ function Dashboard() {
       // Life always represents all years, including when entering Summary.
       setSummaryPeriod('life');
       setYear(null);
-      setSelectedActivity(null);
-      setSelectedPrefecture(null);
-      setSelectedCountry(null);
+      clearSelection();
     }
     window.history.pushState(
       null,
@@ -227,7 +227,6 @@ function Dashboard() {
       <Header
         dark={dark}
         toggleTheme={toggle}
-        activities={activities}
         page={page}
         onNavigate={navigate}
       />
@@ -251,9 +250,7 @@ function Dashboard() {
             onClick={() => {
               setFilter(value);
               setCalendarNavigationMonth(null);
-              setSelectedActivity(null);
-              setSelectedPrefecture(null);
-              setSelectedCountry(null);
+              clearSelection();
             }}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filter === value ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}>
             {label}
@@ -288,9 +285,7 @@ function Dashboard() {
                 }
                 setYear(value);
                 setCalendarNavigationMonth(null);
-                setSelectedActivity(null);
-                setSelectedPrefecture(null);
-                setSelectedCountry(null);
+                clearSelection();
               }}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${year === value
                 ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
@@ -340,9 +335,7 @@ function Dashboard() {
               setSummaryPeriod(nextPeriod);
               if (nextPeriod === 'life') {
                 setYear(null);
-                setSelectedActivity(null);
-                setSelectedPrefecture(null);
-                setSelectedCountry(null);
+                clearSelection();
               }
             }}
           />
@@ -401,9 +394,7 @@ function Dashboard() {
                       <button key={mode} type="button" aria-pressed={footprintMode === mode}
                         onClick={() => {
                           setFootprintMode(mode);
-                          setSelectedPrefecture(null);
-                          setSelectedCountry(null);
-                          setSelectedActivity(null);
+                          clearSelection();
                         }}
                         className={footprintMode === mode
                           ? 'rounded-full bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-on-accent)]'
