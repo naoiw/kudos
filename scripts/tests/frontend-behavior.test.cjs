@@ -46,9 +46,11 @@ const parseTime = value => {
   return value.split(':').reduce((total, part) => total * 60 + Number(part), 0);
 };
 const mondayWeek = loadTs('src/core/heatmapWeek.ts');
+const activityDays = loadTs('src/core/activityDays.ts');
 const heatmap = loadTs('src/core/heatmapGrid.ts', {
   './heatmapWeek': mondayWeek,
   './hooks/useActivities': { parseMovingTime: parseTime },
+  './activityDays': activityDays,
 });
 const geometry = loadTs('src/core/trackGeometry.ts', {
   '@mapbox/polyline': polyline,
