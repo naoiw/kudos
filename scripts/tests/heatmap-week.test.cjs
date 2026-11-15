@@ -24,8 +24,9 @@ test('heatmap rows start on Monday and end on Sunday', () => {
     Array.from({ length: 7 }, (_, day) => mondayFirstWeekdayIndex(day)),
     [6, 0, 1, 2, 3, 4, 5]
   );
+  const grid = fs.readFileSync('src/core/heatmapGrid.ts', 'utf8');
   const heatmap = fs.readFileSync('src/components/ContributionHeatmap.tsx', 'utf8');
-  assert.match(heatmap, /startDay = mondayFirstWeekdayIndex\(startDate\.getDay\(\)\)/);
+  assert.match(grid, /startDay = mondayFirstWeekdayIndex\(startDate\.getDay\(\)\)/);
   assert.match(heatmap, /weekdayIds = \['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'\]/);
   assert.match(heatmap, /\['月', '', '水', '', '金', '', ''\]/);
   assert.match(heatmap, /\['M', '', 'W', '', 'F', '', ''\]/);
@@ -41,7 +42,8 @@ test('January 1 aligns in its correct weekday row across year boundaries', () =>
     const firstWeekDates = Math.min(7 - offset, 365);
     assert.equal((7 - firstWeekDates), offset, 'First week padding for ' + year);
   }
+  const grid = fs.readFileSync('src/core/heatmapGrid.ts', 'utf8');
   const heatmap = fs.readFileSync('src/components/ContributionHeatmap.tsx', 'utf8');
-  assert.match(heatmap, /Math\.floor\(\(d \+ startDay\) \/ 7\)/);
+  assert.match(grid, /Math\.floor\(\(d \+ startDay\) \/ 7\)/);
   assert.match(heatmap, /Array\.from\(\{ length: 7 - week\.length \}/);
 });

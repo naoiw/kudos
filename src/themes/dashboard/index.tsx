@@ -17,6 +17,7 @@ import {
 import { useTheme } from '@/hooks/useTheme';
 import { useLocale } from '@/hooks/useLocale';
 import { Header } from '@/components/Header';
+import { UserPicker } from '@/components/UserPicker';
 import { StatsCards } from '@/components/StatsCards';
 import { GoalSettings } from '@/components/GoalSettings';
 import { ContributionHeatmap } from '@/components/ContributionHeatmap';
@@ -203,19 +204,12 @@ function Dashboard() {
       />
 
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-6">
-        <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
-          <span className="text-[var(--color-muted)]">表示ユーザー</span>
-          <select
-            aria-label="表示するユーザー"
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-[var(--color-text)]"
-            value={currentUser.user_id}
-            onChange={(event) => chooseUser(event.target.value)}
-          >
-            {catalog.users.map((user) => (
-              <option key={user.user_id} value={user.user_id}>{user.display_name}</option>
-            ))}
-          </select>
-        </label>
+        <UserPicker
+          users={catalog.users}
+          selectedUserId={currentUser.user_id}
+          locale={locale}
+          onChange={chooseUser}
+        />
         <span className="text-xs text-[var(--color-muted)]">
           {catalog.mode === 'public-preview'
             ? `公開用の統計データ · ${catalog.datePrecision === 'month' ? '年月のみ公開（日・週単位の統計は非表示）' : '正確な活動日時を公開承認済み'}`
