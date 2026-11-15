@@ -183,25 +183,17 @@ export function SummaryPage({
   const { locale, t } = useLocale();
   const isJapanese = locale === 'ja';
   const monthOnly = datePrecision === 'month';
-  const [period, setPeriod] = useState<SummaryPeriod>('month');
+  const [period, setPeriod] = useState<SummaryPeriod>('life');
   const [limit, setLimit] = useState(12);
   const groups = useMemo(
     () => groupSummary(activities, period),
     [activities, period]
   );
-  const periods: [SummaryPeriod, string][] = monthOnly
-    ? [
-        ['year', isJapanese ? '年' : 'Year'],
-        ['month', isJapanese ? '月' : 'Month'],
-        ['life', 'Life'],
-      ]
-    : [
-        ['year', isJapanese ? '年' : 'Year'],
-        ['month', isJapanese ? '月' : 'Month'],
-        ['week', isJapanese ? '週' : 'Week'],
-        ['day', isJapanese ? '日' : 'Day'],
-        ['life', 'Life'],
-      ];
+  const periods: [SummaryPeriod, string][] = [
+    ['life', 'Life'],
+    ['year', isJapanese ? '年' : 'Year'],
+    ['month', isJapanese ? '月' : 'Month'],
+  ];
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -216,8 +208,8 @@ export function SummaryPage({
 
       </div>
       {monthOnly && <p className="mb-4 text-sm text-[var(--color-muted)]" role="note">
-        {isJapanese ? '活動日時は年月のみ公開されています。日・週別集計は表示しません。'
-          : 'Only year and month are public; daily and weekly statistics are hidden.'}
+        {isJapanese ? '活動日時は年月のみ公開されています。'
+          : 'Only year and month are public.'}
       </p>}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div
