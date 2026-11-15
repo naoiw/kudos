@@ -1,4 +1,3 @@
-import type { Activity } from '../types';
 import { useLocale } from '../hooks/useLocale';
 
 type Page = 'home' | 'tracks' | 'summary';
@@ -6,7 +5,6 @@ type Page = 'home' | 'tracks' | 'summary';
 interface HeaderProps {
   dark: boolean;
   toggleTheme: () => void;
-  activities: Activity[];
   page: Page;
   onNavigate: (p: Page) => void;
 }

@@ -1,6 +1,7 @@
 import type { Activity } from './types';
 import { mondayFirstWeekdayIndex } from './heatmapWeek';
 import { parseMovingTime } from './hooks/useActivities';
+import { groupActivitiesByLocalDay } from './activityDays';
 
 // Pure date/metric transformations are separate from the large heatmap UI.
 // Map any activity type to the 4 display categories
@@ -45,7 +46,7 @@ export function buildYearGrid(
   // Per-day totals
   const dayMap = new Map<string, number>();
   const dayTimeMap = new Map<string, number>(); // date → total seconds (for Training)
-  const dayActivitiesMap = new Map<string, Activity[]>();
+  const dayActivitiesMap = groupActivitiesByLocalDay(yearActivities);
   for (const a of yearActivities) {
     const day = a.start_date_local.slice(0, 10);
     dayMap.set(
@@ -56,9 +57,6 @@ export function buildYearGrid(
       day,
       (dayTimeMap.get(day) || 0) + parseMovingTime(a.moving_time)
     );
-    const arr = dayActivitiesMap.get(day) || [];
-    arr.push(a);
-    dayActivitiesMap.set(day, arr);
   }
 
   // Per-type max (for "all" mode per-type intensity)
@@ -104,10 +102,7 @@ export function buildYearGrid(
     const weekIdx = Math.floor((d + startDay) / 7);
     while (grid.length <= weekIdx) grid.push([]);
     const key = `${yr}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    // Match CalendarWidget: select and display the day's earliest activity first.
-    const dayActs = [...(dayActivitiesMap.get(key) || [])].sort((a, b) =>
-      a.start_date_local.localeCompare(b.start_date_local)
-    );
+    const dayActs = dayActivitiesMap.get(key) ?? [];
     const dist = dayMap.get(key) || 0;
     const domType = dominantDisplayType(dayActs);
     const typeValue =

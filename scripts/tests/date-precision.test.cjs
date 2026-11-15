@@ -72,13 +72,15 @@ test('monthly summary groups by true year and month without inventing days', () 
   ];
   assert.equal(exports.summaryKey('2026-11', 'month'), '2026-11');
   assert.equal(exports.summaryKey('2026-11', 'year'), '2026');
-  assert.throws(() => exports.summaryKey('2026-11', 'day'), /exact public dates/);
-  assert.throws(() => exports.summaryKey('2026-11', 'week'), /exact public dates/);
+  assert.equal(exports.summaryKey('2026-11', 'life'), 'Life');
+  assert.match(source, /export type SummaryPeriod = 'life' \| 'year' \| 'month'/);
   const grouped = exports.groupSummary(activities, 'month');
   assert.deepEqual(Array.from(grouped, ([key, rows]) => [key, rows.length]),
     [['2027-01', 1], ['2026-12', 1], ['2026-11', 2]]);
   const chart = exports.summaryChart(activities.slice(0, 3), 'year', '2026');
   assert.equal(chart.find(row => row.label === '11').km, 3);
   assert.equal(chart.find(row => row.label === '12').km, 3);
-  assert.equal(exports.summarize(activities).distance, 10000);
+  const life = exports.summaryChart(activities, 'life', 'Life');
+  assert.equal(life.find(row => row.label === '2026').km, 6);
+  assert.equal(life.find(row => row.label === '2027').km, 4);
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Activity } from '../types';
 import { formatDistance } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
+import { groupActivitiesByLocalDay } from '../core/activityDays';
 import {
   activityMonth,
   calendarMonthBounds,
@@ -83,18 +84,11 @@ export function CalendarWidget({
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const byDay = useMemo(() => {
-    const result = new Map<number, Activity[]>();
-    for (const activity of activities) {
-      const date = new Date(activity.start_date_local);
-      if (date.getFullYear() === year && date.getMonth() === monthIndex) {
-        const list = result.get(date.getDate()) ?? [];
-        list.push(activity);
-        result.set(date.getDate(), list);
-      }
-    }
-    for (const list of result.values())
-      list.sort((a, b) => a.start_date_local.localeCompare(b.start_date_local));
-    return result;
+    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    const grouped = groupActivitiesByLocalDay(activities, monthKey);
+    return new Map(
+      [...grouped].map(([date, list]) => [Number(date.slice(8, 10)), list])
+    );
   }, [activities, year, monthIndex]);
   const monthActivities = [...byDay.values()].flat();
   const distance = monthActivities.reduce((sum, a) => sum + a.distance, 0);

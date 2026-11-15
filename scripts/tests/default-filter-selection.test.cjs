@@ -24,9 +24,14 @@ test('switching users selects their latest year and all sports', () => {
   assert.match(chooseUser, /catalog\.activities\.filter\(\(activity\) =>\s*activity\.user_id === userId/);
   assert.match(chooseUser, /setFilter\('all'\)/);
   assert.match(chooseUser, /setYear\(\s*page === 'summary' && summaryPeriod === 'life'\s*\?\s*null\s*:\s*getAvailableYears\(userActivities\)\[0\] \?\? null\s*\)/);
-  assert.match(chooseUser, /setSelectedCountry\(null\)/);
-  assert.match(chooseUser, /setSelectedPrefecture\(null\)/);
-  assert.match(chooseUser, /setSelectedActivity\(null\)/);
+  assert.match(chooseUser, /clearSelection\(\)/);
+  const reset = dashboard.slice(
+    dashboard.indexOf('  const clearSelection = '),
+    dashboard.indexOf('  const [page, setPage]')
+  );
+  assert.match(reset, /setSelectedCountry\(null\)/);
+  assert.match(reset, /setSelectedPrefecture\(null\)/);
+  assert.match(reset, /setSelectedActivity\(null\)/);
 });
 
 test('all-years remains available as a selectable override', () => {

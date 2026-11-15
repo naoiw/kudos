@@ -23,7 +23,9 @@ test('calendar selects the earliest activity on dates with multiple sessions', (
   const source = fs.readFileSync('src/components/CalendarWidget.tsx', 'utf8');
 
   // The per-day arrays are ordered chronologically before selecting the first.
-  assert.match(source, /list\.sort\(\(a, b\) => a\.start_date_local\.localeCompare\(b\.start_date_local\)\)/);
+  const grouping = fs.readFileSync('src/core/activityDays.ts', 'utf8');
+  assert.match(source, /groupActivitiesByLocalDay\(activities, monthKey\)/);
+  assert.match(grouping, /list\.sort\(\(a, b\) => a\.start_date_local\.localeCompare\(b\.start_date_local\)\)/);
   assert.match(source, /onClick=\{\(\) => \{\s*setDay\(number\);[\s\S]*?if \(list\.length > 0\) onSelectActivity\(list\[0\]\);/);
   assert.doesNotMatch(source, /if \(list\.length === 1\) onSelectActivity\(list\[0\]\)/);
 

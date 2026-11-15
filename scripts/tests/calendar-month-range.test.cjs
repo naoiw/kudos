@@ -26,6 +26,7 @@ function loadTs(filename, dependencies) {
 }
 
 const limits = loadTs('src/core/calendarMonthBounds.ts', {});
+const activityDays = loadTs('src/core/activityDays.ts', {});
 const local = (year, month) => new Date(year, month - 1, 1);
 const label = date => String(date.getFullYear()) + '-' +
   String(date.getMonth() + 1).padStart(2, '0');
@@ -134,6 +135,7 @@ test('calendar disables month arrows at both history boundaries', () => {
     '../hooks/useActivities': { formatDistance: meters => (meters / 1000).toFixed(1) },
     '../hooks/useLocale': { useLocale: () => ({ locale: 'ja' }) },
     '../core/calendarMonthBounds': limits,
+    '../core/activityDays': activityDays,
   });
   const props = {
     activities: [olderItem, latestItem],

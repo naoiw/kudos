@@ -31,7 +31,6 @@ function SummaryCard({
   label,
   isJapanese,
   filter,
-  onSelectActivity,
   monthOnly,
 }: {
   activities: Activity[];
@@ -40,32 +39,16 @@ function SummaryCard({
   label: string;
   isJapanese: boolean;
   filter: SportFilter;
-  onSelectActivity: (a: Activity) => void;
 }) {
   const chartAvailable = !monthOnly || period !== 'month';
   const chart = chartAvailable ? summaryChart(activities, period, label) : [];
   const metrics = sportMetrics(activities, filter, isJapanese ? 'ja' : 'en',
     monthOnly ? 'month' : null);
-  const chartUnit =
-    period === 'life'
-      ? isJapanese
-        ? '年'
-        : 'Year'
-      : period === 'year'
-        ? isJapanese
-          ? '月'
-          : 'Month'
-        : period === 'week'
-          ? isJapanese
-            ? '月曜〜日曜'
-            : 'Mon–Sun'
-          : period === 'day'
-            ? isJapanese
-              ? '開始日時'
-              : 'Start time'
-            : isJapanese
-              ? '日'
-              : 'Day';
+  const chartUnit = period === 'life'
+    ? (isJapanese ? '年' : 'Year')
+    : period === 'year'
+      ? (isJapanese ? '月' : 'Month')
+      : (isJapanese ? '日' : 'Day');
   return (
     <article className={panel}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -147,24 +130,6 @@ function SummaryCard({
             : 'Daily breakdown is unavailable for month-only public data.'}
         </p>
       )}
-      {period === 'day' && !monthOnly && (
-        <div className="mt-4 space-y-2 border-t border-[var(--color-border)] pt-4">
-          {activities.map((a) => (
-            <button
-              key={a.run_id}
-              className="flex w-full items-center justify-between gap-3 rounded-lg p-2 text-left text-sm hover:bg-[var(--color-bg)]"
-              onClick={() => onSelectActivity(a)}
-            >
-              <span>
-                {a.start_date_local.slice(11, 16)} · {a.name}
-              </span>
-              <span className="shrink-0 text-[var(--color-accent)]">
-                {number(a.distance / 1000)} km ↗
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
     </article>
   );
 }
@@ -174,14 +139,12 @@ export function SummaryPage({
   filter,
   period,
   onPeriodChange,
-  onSelectActivity,
   datePrecision,
 }: {
   activities: Activity[];
   filter: SportFilter;
   period: SummaryPeriod;
   onPeriodChange: (value: SummaryPeriod) => void;
-  onSelectActivity: (a: Activity) => void;
   datePrecision?: DatePrecision | null;
 }) {
   const { locale, t } = useLocale();
@@ -260,7 +223,6 @@ export function SummaryPage({
               period={period}
               isJapanese={isJapanese}
               monthOnly={monthOnly}
-              onSelectActivity={onSelectActivity}
             />
           ))}
         </div>

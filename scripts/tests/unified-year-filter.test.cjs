@@ -13,7 +13,7 @@ test('one dashboard year selector controls activity data and widgets', () => {
   assert.match(dashboard, /aria-label=\{locale === 'ja' \? '表示する年' : 'Activity year'\}/);
   assert.match(dashboard, /\[null, \.\.\.years\]\.map\(\(value\) => \(/);
   assert.match(dashboard, /page === 'summary' && summaryPeriod === 'life' && value !== null/);
-  assert.match(dashboard, /setYear\(value\);\s*setCalendarNavigationMonth\(null\);\s*setSelectedActivity\(null\);\s*setSelectedPrefecture\(null\);/);
+  assert.match(dashboard, /setYear\(value\);\s*setCalendarNavigationMonth\(null\);\s*clearSelection\(\);/);
   assert.match(dashboard, /const yearFiltered = useFilteredActivities\(activities, 'all', year\)/);
   assert.match(dashboard, /const baseFiltered = useFilteredActivities\(activities, filter, year\)/);
   assert.match(dashboard, /<ProfileCard activities=\{yearFiltered\} filter=\{filter\}/);
