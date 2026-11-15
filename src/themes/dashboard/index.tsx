@@ -31,6 +31,7 @@ import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { countriesForActivity } from '@/core/countryRoutes';
 import { activityYear } from '@/core/datePrecision';
+import type { SummaryPeriod } from '@/utils/summary';
 import {
   defaultSportGoals,
   loadSportGoals,
@@ -85,12 +86,15 @@ function Dashboard() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [footprintMode, setFootprintMode] = useState<'japan' | 'world'>('japan');
   const [year, setYear] = useState<number | null>(
-    () => getAvailableYears(activities)[0] ?? null
+    () => pageFromPath() === 'summary'
+      ? null
+      : getAvailableYears(activities)[0] ?? null
   );
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
   );
   const [page, setPage] = useState<Page>(pageFromPath);
+  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('life');
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalsByUser, setGoalsByUser] = useState<Record<string, SportGoals>>(
     () => Object.fromEntries(
@@ -117,7 +121,17 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    const onPopState = () => setPage(pageFromPath());
+    const onPopState = () => {
+      const nextPage = pageFromPath();
+      setPage(nextPage);
+      if (nextPage === 'summary') {
+        setSummaryPeriod('life');
+        setYear(null);
+        setSelectedActivity(null);
+        setSelectedPrefecture(null);
+        setSelectedCountry(null);
+      }
+    };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -130,13 +144,25 @@ function Dashboard() {
     setSelectedActivity(null);
     setSelectedPrefecture(null);
     setSelectedCountry(null);
-    setYear(getAvailableYears(userActivities)[0] ?? null);
+    setYear(
+      page === 'summary' && summaryPeriod === 'life'
+        ? null
+        : getAvailableYears(userActivities)[0] ?? null
+    );
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('u', userId);
     window.history.replaceState(null, '', nextUrl);
   };
 
   const navigate = (next: Page) => {
+    if (next === 'summary') {
+      // Life always represents all years, including when entering Summary.
+      setSummaryPeriod('life');
+      setYear(null);
+      setSelectedActivity(null);
+      setSelectedPrefecture(null);
+      setSelectedCountry(null);
+    }
     window.history.pushState(
       null,
       '',
@@ -252,6 +278,10 @@ function Dashboard() {
               type="button"
               aria-pressed={year === value}
               onClick={() => {
+                // Selecting a specific year in Life mode switches to yearly details.
+                if (page === 'summary' && summaryPeriod === 'life' && value !== null) {
+                  setSummaryPeriod('year');
+                }
                 setYear(value);
                 setSelectedActivity(null);
                 setSelectedPrefecture(null);
@@ -300,6 +330,16 @@ function Dashboard() {
             datePrecision={catalog.datePrecision}
             activities={baseFiltered}
             filter={filter}
+            period={summaryPeriod}
+            onPeriodChange={(nextPeriod) => {
+              setSummaryPeriod(nextPeriod);
+              if (nextPeriod === 'life') {
+                setYear(null);
+                setSelectedActivity(null);
+                setSelectedPrefecture(null);
+                setSelectedCountry(null);
+              }
+            }}
             onSelectActivity={(activity) => {
               navigate('home');
               selectActivity(activity);
