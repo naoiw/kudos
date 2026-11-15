@@ -124,7 +124,7 @@ export function ActivityLog({
       </p>
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
               <th className="pb-3 font-medium">{datePrecision === 'month'
@@ -143,14 +143,13 @@ export function ActivityLog({
                       : (locale === 'ja' ? '速度／ペース' : 'Speed / pace')}
                 </th>
               )}
-              <th className="pb-3 font-medium">{t('hr')}</th>
             </tr>
           </thead>
           <tbody>
             {!pageData.length && (
               <tr>
                 <td
-                  colSpan={filter === 'Golf' ? 6 : 7}
+                  colSpan={filter === 'Golf' ? 5 : 6}
                   className="py-10 text-center text-[var(--color-muted)]"
                 >
                   {locale === 'ja'
@@ -206,9 +205,6 @@ export function ActivityLog({
                     {activityMotionValue(a)}
                   </td>
                 )}
-                <td className="py-3 text-[var(--color-muted)]">
-                  {a.average_heartrate ? Math.round(a.average_heartrate) : '--'}
-                </td>
               </tr>
             ))}
           </tbody>

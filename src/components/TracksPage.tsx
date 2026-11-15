@@ -377,20 +377,7 @@ export function TracksPage({
                       </p>
                     </div>
                   )}
-                {selectedActivity.average_heartrate != null &&
-                  selectedActivity.average_heartrate > 0 && (
-                    <div>
-                      <p className="text-[9px] tracking-wider text-[var(--color-muted)] uppercase">
-                        {locale === 'ja' ? '心拍数' : 'HR'}
-                      </p>
-                      <p className="font-mono text-base leading-tight font-bold">
-                        {Math.round(selectedActivity.average_heartrate)}{' '}
-                        <span className="text-[10px] font-normal text-[var(--color-muted)]">
-                          bpm
-                        </span>
-                      </p>
-                    </div>
-                  )}
+
               </div>
             </div>
           )}
