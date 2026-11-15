@@ -345,10 +345,6 @@ function Dashboard() {
                 setSelectedCountry(null);
               }
             }}
-            onSelectActivity={(activity) => {
-              navigate('home');
-              selectActivity(activity);
-            }}
           />
         ) : page === 'tracks' ? (
           <TracksPage
