@@ -30,7 +30,10 @@ test('summary starts in Life mode and retains the year/month aggregation', () =>
 
 test('month-only disclosure does not expose day/week period selection', () => {
   assert.match(summary, /'活動日時は年月のみ公開されています。'/);
-  assert.doesNotMatch(summary, /'日' : 'Day'|'週' : 'Week'/);
+  assert.doesNotMatch(summary, /period === 'day'|period === 'week'/);
+  const periodChoices = summary.match(/const periods: \[SummaryPeriod, string\]\[\] = \[([\s\S]*?)\];/);
+  assert.ok(periodChoices);
+  assert.doesNotMatch(periodChoices[1], /\['day'|\['week'/);
 });
 
 
