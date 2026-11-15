@@ -172,18 +172,21 @@ function SummaryCard({
 export function SummaryPage({
   activities,
   filter,
+  period,
+  onPeriodChange,
   onSelectActivity,
   datePrecision,
 }: {
   activities: Activity[];
   filter: SportFilter;
+  period: SummaryPeriod;
+  onPeriodChange: (value: SummaryPeriod) => void;
   onSelectActivity: (a: Activity) => void;
   datePrecision?: DatePrecision | null;
 }) {
   const { locale, t } = useLocale();
   const isJapanese = locale === 'ja';
   const monthOnly = datePrecision === 'month';
-  const [period, setPeriod] = useState<SummaryPeriod>('life');
   const [limit, setLimit] = useState(12);
   const groups = useMemo(
     () => groupSummary(activities, period),
@@ -222,7 +225,7 @@ export function SummaryPage({
               key={value}
               aria-pressed={period === value}
               onClick={() => {
-                setPeriod(value);
+                onPeriodChange(value);
                 setLimit(12);
               }}
               className={`rounded-lg px-4 py-2 text-sm ${period === value ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}
