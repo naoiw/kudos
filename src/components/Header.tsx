@@ -40,8 +40,6 @@ export function Header({ dark, toggleTheme, page, onNavigate }: HeaderProps) {
             className="rounded-lg px-2 py-1 text-sm text-[var(--color-muted)] hover:bg-[var(--color-card)]">
             {dark ? '☀' : '☾'}
           </button>
-          <a href="https://github.com/naoiw/kudos" target="_blank" rel="noopener noreferrer"
-            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]" title="GitHub">GitHub</a>
         </nav>
       </div>
     </header>
