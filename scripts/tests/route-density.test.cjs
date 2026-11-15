@@ -90,7 +90,8 @@ test('map sources remain selected-user/year/sport/region scoped; worker is cance
   assert.match(map, /viewMode === 'density' && !selectedActivity/);
   assert.match(map, /aria-pressed=\{viewMode === mode\}/);
   assert.match(layer, /route-map-density-canvas/);
-  assert.match(fs.readFileSync('src/components/RouteMap.css', 'utf8'),
-    /route-map-density-canvas[\\s\\S]*?pointer-events: none/);
+  const css = fs.readFileSync('src/components/RouteMap.css', 'utf8');
+  const densityRule = css.split('.route-map-density-canvas')[1]?.split('}')[0] ?? '';
+  assert.match(densityRule, /pointer-events: none/);
   assert.match(worker, /calculateRouteDensity\(data\)/);
 });
