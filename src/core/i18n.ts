@@ -12,7 +12,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     showing: '表示', of: '/', home: 'ホーム', tracks: 'ルート一覧',
     summary: '集計', loading: '読み込み中…', calendarActivities: '件',
     date: '日付', type: '種目', name: '名前', distance: '距離',
-    duration: '運動時間', pace: 'ペース', hr: '心拍数', page: 'ページ',
+    duration: '運動時間', pace: 'ペース', page: 'ページ',
     pageOf: '/', pages: 'ページ',
   },
   en: {
@@ -26,7 +26,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     home: 'Home', tracks: 'Tracks', summary: 'Summary',
     loading: 'Loading...', calendarActivities: 'activities',
     date: 'DATE', type: 'TYPE', name: 'NAME', distance: 'DISTANCE',
-    duration: 'DURATION', pace: 'PACE', hr: 'HR', page: 'Page',
+    duration: 'DURATION', pace: 'PACE', page: 'Page',
     pageOf: 'of', pages: '',
   },
 };

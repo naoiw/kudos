@@ -28,7 +28,6 @@ export function summarize(activities: Activity[]) {
     (sum, a) => sum + parseMovingTime(a.moving_time),
     0
   );
-  const heartRates = activities.filter((a) => (a.average_heartrate ?? 0) > 0);
   const speeds = activities.map((a) => {
     const time = parseMovingTime(a.moving_time);
     return time > 0 ? a.distance / time : 0;
@@ -41,10 +40,6 @@ export function summarize(activities: Activity[]) {
     maxDistance: Math.max(0, ...activities.map((a) => a.distance)),
     maxSpeed: Math.max(0, ...speeds),
     elevation: activities.reduce((sum, a) => sum + (a.elevation_gain ?? 0), 0),
-    heartRate: heartRates.length
-      ? heartRates.reduce((sum, a) => sum + a.average_heartrate!, 0) /
-        heartRates.length
-      : null,
   };
 }
 
