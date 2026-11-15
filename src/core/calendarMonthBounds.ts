@@ -25,8 +25,7 @@ export function activityMonth(date: string): Date | null {
  */
 export function calendarMonthBounds(
   allUserActivities: readonly Pick<Activity, 'start_date_local'>[],
-  now: Date,
-  yearFilter: number | null
+  now: Date
 ): CalendarMonthBounds {
   const thisMonth = monthStart(now);
   let first = thisMonth;
@@ -35,17 +34,9 @@ export function calendarMonthBounds(
     if (date && date.getTime() < first.getTime()) first = date;
   }
 
-  let last = thisMonth;
-  if (yearFilter !== null) {
-    const yearStart = new Date(yearFilter, 0, 1);
-    const yearEnd = new Date(yearFilter, 11, 1);
-    if (yearStart.getTime() > first.getTime()) first = yearStart;
-    if (yearEnd.getTime() < last.getTime()) last = yearEnd;
-  }
-
-  // Empty or future-only selections must not create an invalid date range.
-  if (first.getTime() > last.getTime()) first = last;
-  return { first, last };
+  // Browsing across years is allowed: the top year filter follows navigation.
+  // The oldest activity month and current month remain the only hard bounds.
+  return { first, last: thisMonth };
 }
 
 export function isMonthWithinBounds(
