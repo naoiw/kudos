@@ -40,7 +40,7 @@ test('oldest activity month through current month is the only navigable range', 
     item(2, '2024-05-29T12:00:00'),
     item(3, '2025-02-11T14:00:00'),
   ];
-  const bounds = limits.calendarMonthBounds(all, local(2026, 11), null);
+  const bounds = limits.calendarMonthBounds(all, local(2026, 11));
   assert.equal(label(bounds.first), '2024-05');
   assert.equal(label(bounds.last), '2026-11');
   assert.equal(limits.isMonthWithinBounds(local(2024, 4), bounds), false);
@@ -56,38 +56,38 @@ test('the complete user history, not visible sport or region, sets oldest month'
     item(1, '2022-03-17T12:00:00'),
     item(2, '2026-09-03T09:00:00'),
   ];
-  const bounds = limits.calendarMonthBounds(all, local(2026, 11), null);
+  const bounds = limits.calendarMonthBounds(all, local(2026, 11));
   assert.equal(label(bounds.first), '2022-03');
   const dashboard = fs.readFileSync('src/themes/dashboard/index.tsx', 'utf8');
   assert.match(dashboard, /<CalendarWidget[\s\S]*?activities=\{filtered\}\s*allActivities=\{activities\}/);
   assert.match(dashboard, /<CalendarWidget[\s\S]*?currentUser\.user_id/);
 });
 
-test('selected year is also respected and cannot unlock future months', () => {
+test('global year filter does not constrain browsing between activity years', () => {
   const all = [
     item(1, '2023-10-21T12:00:00'),
     item(2, '2025-02-08T09:00:00'),
     item(3, '2026-10-14T17:00:00'),
   ];
   const now = local(2026, 11);
-  const firstYear = limits.calendarMonthBounds(all, now, 2023);
+  const firstYear = limits.calendarMonthBounds(all, now);
   assert.equal(label(firstYear.first), '2023-10');
-  assert.equal(label(firstYear.last), '2023-12');
-  const middleYear = limits.calendarMonthBounds(all, now, 2025);
-  assert.equal(label(middleYear.first), '2025-01');
-  assert.equal(label(middleYear.last), '2025-12');
-  const currentYear = limits.calendarMonthBounds(all, now, 2026);
-  assert.equal(label(currentYear.first), '2026-01');
+  assert.equal(label(firstYear.last), '2026-11');
+  const middleYear = limits.calendarMonthBounds(all, now);
+  assert.equal(label(middleYear.first), '2023-10');
+  assert.equal(label(middleYear.last), '2026-11');
+  const currentYear = limits.calendarMonthBounds(all, now);
+  assert.equal(label(currentYear.first), '2023-10');
   assert.equal(label(currentYear.last), '2026-11');
   assert.equal(limits.isMonthWithinBounds(local(2026, 12), currentYear), false);
 });
 
 test('empty history and future-only history do not expose future months', () => {
   const now = local(2026, 11);
-  const empty = limits.calendarMonthBounds([], now, null);
+  const empty = limits.calendarMonthBounds([], now);
   assert.equal(label(empty.first), '2026-11');
   assert.equal(label(empty.last), '2026-11');
-  const future = limits.calendarMonthBounds([item(1, '2027-01-02T00:00:00')], now, 2027);
+  const future = limits.calendarMonthBounds([item(1, '2027-01-02T00:00:00')], now);
   assert.equal(label(future.first), '2026-11');
   assert.equal(label(future.last), '2026-11');
   assert.equal(limits.activityMonth('not-a-date'), null);
@@ -141,6 +141,7 @@ test('calendar disables month arrows at both history boundaries', () => {
     yearFilter: null,
     selectedActivity: olderItem,
     onSelectActivity: () => {},
+    onNavigateMonth: () => {},
   };
   function render() {
     currentHook = 0;
