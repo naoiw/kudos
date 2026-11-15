@@ -10,7 +10,7 @@ test('initial activity filters default to all sports and the latest available ye
 
   assert.match(dashboard, /const \[filter, setFilter\] = useState<SportFilter>\('all'\)/);
   assert.match(dashboard,
-    /const \[year, setYear\] = useState<number \| null>\(\s*\(\) => getAvailableYears\(activities\)\[0\] \?\? null\s*\)/);
+    /const \[year, setYear\] = useState<number \| null>\(\s*\(\) => pageFromPath\(\) === 'summary'\s*\?\s*null\s*:\s*getAvailableYears\(activities\)\[0\] \?\? null\s*\)/);
   assert.match(activities, /return Array\.from\(years\)\.sort\(\(a, b\) => b - a\)/);
   assert.match(dashboard, /const years = useMemo\(\(\) => getAvailableYears\(activities\), \[activities\]\)/);
 });
@@ -23,7 +23,7 @@ test('switching users selects their latest year and all sports', () => {
   );
   assert.match(chooseUser, /catalog\.activities\.filter\(\(activity\) =>\s*activity\.user_id === userId/);
   assert.match(chooseUser, /setFilter\('all'\)/);
-  assert.match(chooseUser, /setYear\(getAvailableYears\(userActivities\)\[0\] \?\? null\)/);
+  assert.match(chooseUser, /setYear\(\s*page === 'summary' && summaryPeriod === 'life'\s*\?\s*null\s*:\s*getAvailableYears\(userActivities\)\[0\] \?\? null\s*\)/);
   assert.match(chooseUser, /setSelectedCountry\(null\)/);
   assert.match(chooseUser, /setSelectedPrefecture\(null\)/);
   assert.match(chooseUser, /setSelectedActivity\(null\)/);
