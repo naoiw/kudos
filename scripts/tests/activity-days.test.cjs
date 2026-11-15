@@ -16,7 +16,9 @@ vm.runInNewContext(script, { exports: api }, { filename });
 
 const item = (id, date) => ({ run_id: id, start_date_local: date });
 const toIds = groups => Object.fromEntries(
-  [...groups].map(([key, entries]) => [key, entries.map(entry => entry.run_id)])
+  Array.from(groups, ([key, entries]) => [
+    key, Array.from(entries, entry => entry.run_id),
+  ])
 );
 
 test('day groups preserve recorded local dates and chronologically order sessions', () => {
