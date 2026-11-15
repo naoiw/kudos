@@ -15,7 +15,9 @@ export type WorldRegion = {
 };
 
 const regions: WorldRegion[] = [
-  ...source.features,
+  ...source.features.map(region => ({
+    ...region, polygons: region.polygons as unknown as Coordinate[][][],
+  })),
   ...source.tiny.map(({ code, name, ja, point }) => ({
     code, name, ja, polygons: [] as Coordinate[][][], point: point as Coordinate,
   })),
@@ -27,7 +29,7 @@ const polygons = source.features.map((feature) => ({
   polygons: feature.polygons.map((rings): Polygon => {
     const coordinates = rings[0];
     return {
-      rings: rings as Ring[],
+      rings: rings as unknown as Ring[],
       bounds: {
         west: Math.min(...coordinates.map(point => point[0])),
         east: Math.max(...coordinates.map(point => point[0])),
