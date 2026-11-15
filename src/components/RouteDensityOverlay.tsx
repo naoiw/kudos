@@ -1,11 +1,17 @@
 import { useEffect, useRef } from 'react';
 import {
-  CELL_SIZE, densityColor, unproject, type DensityResult,
+  CELL_SIZE, densityColor, densityGridPoint, unproject, type DensityResult,
 } from '../core/routeDensity';
 
 export interface DensityLeafletMap {
   getSize(): { x: number; y: number };
   latLngToContainerPoint(point: [number, number]): { x: number; y: number };
+  getBounds(): {
+    getNorth(): number;
+    getSouth(): number;
+    getWest(): number;
+    getEast(): number;
+  };
   on(event: string, callback: () => void): this;
   off(event: string, callback: () => void): this;
 }
@@ -38,7 +44,17 @@ export function RouteDensityOverlay({
       const context = canvas.getContext('2d');
       if (!context) return;
       context.scale(ratio, ratio);
+      // Culling keeps expensive projection and painting offscreen to a minimum.
+      const bounds = map.getBounds();
+      const northwest = densityGridPoint(bounds.getNorth(), bounds.getWest());
+      const southeast = densityGridPoint(bounds.getSouth(), bounds.getEast());
+      const scoped = northwest && southeast && bounds.getWest() <= bounds.getEast();
+      const minX = scoped ? Math.floor(Math.min(northwest[0], southeast[0])) - 2 : -Infinity;
+      const maxX = scoped ? Math.ceil(Math.max(northwest[0], southeast[0])) + 2 : Infinity;
+      const minY = scoped ? Math.floor(Math.min(northwest[1], southeast[1])) - 2 : -Infinity;
+      const maxY = scoped ? Math.ceil(Math.max(northwest[1], southeast[1])) + 2 : Infinity;
       for (const cell of density.cells) {
+        if (cell.x < minX || cell.x > maxX || cell.y < minY || cell.y > maxY) continue;
         const northwest = map.latLngToContainerPoint(
           unproject(cell.x * CELL_SIZE, cell.y * CELL_SIZE)
         );
@@ -63,12 +79,14 @@ export function RouteDensityOverlay({
     };
     const hide = () => { canvas.style.opacity = '0'; };
     map.on('movestart', hide);
+    map.on('zoomstart', hide);
     map.on('moveend', redraw);
     map.on('zoomend', redraw);
     map.on('resize', redraw);
     redraw();
     return () => {
       map.off('movestart', hide);
+      map.off('zoomstart', hide);
       map.off('moveend', redraw);
       map.off('zoomend', redraw);
       map.off('resize', redraw);
