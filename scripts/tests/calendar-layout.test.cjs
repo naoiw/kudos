@@ -18,3 +18,16 @@ test('calendar keeps a fixed-height detail panel across months and selections', 
   // Six rows are rendered regardless of the first weekday / number of days.
   assert.match(source, /Array\.from\(\{ length: 42 \}/);
 });
+
+test('calendar selects the earliest activity on dates with multiple sessions', () => {
+  const source = fs.readFileSync('src/components/CalendarWidget.tsx', 'utf8');
+
+  // The per-day arrays are ordered chronologically before selecting the first.
+  assert.match(source, /list\.sort\(\(a, b\) => a\.start_date_local\.localeCompare\(b\.start_date_local\)\)/);
+  assert.match(source, /onClick=\{\(\) => \{\s*setDay\(number\);[\s\S]*?if \(list\.length > 0\) onSelectActivity\(list\[0\]\);/);
+  assert.doesNotMatch(source, /if \(list\.length === 1\) onSelectActivity\(list\[0\]\)/);
+
+  // All activities from that day remain selectable independently.
+  assert.match(source, /dayActivities\.map\(\(activity\) => \(/);
+  assert.match(source, /onClick=\{\(\) => onSelectActivity\(activity\)\}/);
+});
