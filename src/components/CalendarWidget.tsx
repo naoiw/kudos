@@ -161,7 +161,8 @@ export function CalendarWidget({
               className={`calendar-day relative flex h-9 flex-col items-center justify-center rounded-md text-xs ${list.length ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/30' : 'text-[var(--color-muted)]'} ${day === number ? 'ring-2 ring-[var(--color-accent)]' : ''}`}
               onClick={() => {
                 setDay(number);
-                if (list.length === 1) onSelectActivity(list[0]);
+                // The date opens its earliest activity; other activities stay selectable below.
+                if (list.length > 0) onSelectActivity(list[0]);
               }}
             >
               <span>{number}</span>
