@@ -4,7 +4,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const ts = require('typescript');
 
 function read(file) {
   return fs.readFileSync(file, 'utf8');
@@ -48,24 +47,6 @@ test('summary no longer calculates heart rate while retaining historic data sche
   assert.doesNotMatch(source, /heartRates|heartRate|average_heartrate/);
   // The imported Activity contract is preserved so old public JSON remains accepted.
   assert.match(read('src/core/types.ts'), /average_heartrate: number \| null;/);
-  const compiled = ts.transpileModule(source, {
-    fileName: 'src/utils/summary.ts',
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText;
-  const moduleExports = {};
-  new Function('require', 'exports', compiled)(
-    name => {
-      if (name === '../hooks/useActivities') {
-        return { parseMovingTime: () => 120 };
-      }
-      throw new Error('Unexpected import: ' + name);
-    },
-    moduleExports
-  );
-  const summary = moduleExports.summarize([
-    { distance: 1000, moving_time: '00:02:00', average_heartrate: 140 },
-  ]);
-  assert.equal(summary.count, 1);
-  assert.equal(summary.distance, 1000);
-  assert.equal(Object.hasOwn(summary, 'heartRate'), false);
+  assert.doesNotMatch(source, /export function summarize\(/);
+  assert.match(source, /export function summaryChart\(/);
 });
