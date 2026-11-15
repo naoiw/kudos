@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { sportIcon, sportLabel } from '../core/sports';
 import { useLocale } from '../hooks/useLocale';
@@ -6,8 +6,8 @@ import { formatActivityDate, activityYear } from '../core/datePrecision';
 import {
   formatDistance,
   parseMovingTime,
-  extractProvince,
 } from '../hooks/useActivities';
+import { locationAchievements } from '../core/locationAchievements';
 import { AVATAR } from '../config';
 
 interface ProfileCardProps {
@@ -22,8 +22,17 @@ export const ProfileCard = memo(function ProfileCard({
   const { t, locale } = useLocale();
 
   // Filter activities by sport type for distance/count/time
-  const filteredActivities =
-    filter === 'all' ? activities : activities.filter((a) => a.type === filter);
+  const filteredActivities = useMemo(
+    () => filter === 'all'
+      ? activities
+      : activities.filter((a) => a.type === filter),
+    [activities, filter]
+  );
+  // Reuse the same GPS-based prefecture detection as the footprint map.
+  const { countryCount, prefectureCount } = useMemo(
+    () => locationAchievements(filteredActivities),
+    [filteredActivities]
+  );
 
   const totalDistance = filteredActivities.reduce((s, a) => s + a.distance, 0);
   const totalCount = filteredActivities.length;
@@ -37,30 +46,6 @@ export const ProfileCard = memo(function ProfileCard({
   );
   const yearsActive =
     allDates.length > 0 ? Math.max(...allDates) - Math.min(...allDates) + 1 : 0;
-
-  // Count countries and Japanese prefectures from optional location metadata.
-  const countries = new Set<string>();
-  const provinces = new Set<string>();
-  for (const a of activities) {
-    const loc = a.location_country;
-    if (!loc || loc === 'None') continue;
-    // Detect country
-    if (loc.startsWith('{')) {
-      try {
-        const d = JSON.parse(loc.replace(/'/g, '"').replace(/None/g, 'null'));
-        if (d.country) countries.add(d.country);
-      } catch {
-        /* ignore */
-      }
-     } else if (loc.includes('日本') || loc.includes('Japan')) {
-      countries.add('日本');
-    } else {
-      countries.add(loc.split(',')[0].trim());
-    }
-    // Japanese prefecture extraction.
-    const p = extractProvince(loc);
-    if (p) provinces.add(p);
-  }
 
   const formatHours = (secs: number) => `${(secs / 3600).toFixed(1)}h`;
 
@@ -124,7 +109,7 @@ export const ProfileCard = memo(function ProfileCard({
                 d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            {countries.size} {t('countries')} ·
+            {countryCount} {t('countries')} ·
             <svg
               className="h-3.5 w-3.5"
               fill="none"
@@ -143,7 +128,7 @@ export const ProfileCard = memo(function ProfileCard({
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            {provinces.size} {t('provinces')}
+            {prefectureCount} {t('provinces')}
           </p>
         </div>
       </div>
