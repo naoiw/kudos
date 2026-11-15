@@ -13,6 +13,8 @@ interface CalendarWidgetProps {
   activities: Activity[];
   allActivities: Activity[];
   yearFilter: number | null;
+  navigationMonth?: Date | null;
+  onNavigateMonth: (month: Date) => void;
   selectedActivity?: Activity | null;
   onSelectActivity: (activity: Activity | null) => void;
 }
@@ -21,6 +23,8 @@ export function CalendarWidget({
   activities,
   allActivities,
   yearFilter,
+  navigationMonth,
+  onNavigateMonth,
   selectedActivity,
   onSelectActivity,
 }: CalendarWidgetProps) {
@@ -28,8 +32,8 @@ export function CalendarWidget({
   const isJapanese = locale === 'ja';
   const [today] = useState(() => new Date());
   const bounds = useMemo(
-    () => calendarMonthBounds(allActivities, today, yearFilter),
-    [allActivities, today, yearFilter]
+    () => calendarMonthBounds(allActivities, today),
+    [allActivities, today]
   );
   const latest = useMemo(
     () =>
@@ -41,7 +45,9 @@ export function CalendarWidget({
   );
   const initial = selectedActivity?.start_date_local || latest;
   const [month, setMonth] = useState(() => {
-    const date = activityMonth(initial) ??
+    const date = activityMonth(selectedActivity?.start_date_local ?? '') ??
+      navigationMonth ??
+      activityMonth(latest) ??
       (yearFilter === null
         ? today
         : new Date(yearFilter, today.getMonth(), 1));
@@ -100,11 +106,14 @@ export function CalendarWidget({
     if (!isMonthWithinBounds(next, bounds)) return;
     setMonth(next);
     setDay(null);
+    onNavigateMonth(next);
   };
   const goToDate = (date: Date) => {
     const targetYear = yearFilter ?? date.getFullYear();
-    setMonth(clampCalendarMonth(new Date(targetYear, date.getMonth(), 1), bounds));
+    const next = clampCalendarMonth(new Date(targetYear, date.getMonth(), 1), bounds);
+    setMonth(next);
     setDay(null);
+    onNavigateMonth(next);
   };
   const monthLabel = month.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', {
     year: 'numeric',
