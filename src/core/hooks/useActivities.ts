@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { resolveActivitySport } from '../sports';
 import { activityYear, normalizePublicDate, resolveDatePrecision } from '../datePrecision';
+import { loadRouteChunks } from '../routeChunks';
 
 // Detect Japanese prefectures in optional human-readable location metadata.
 const JAPANESE_PREFECTURES = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
@@ -149,48 +150,6 @@ interface PreviewDocument {
   route_chunks?: string[];
 }
 
-interface RouteChunk {
-  schema_version: number;
-  routes: { run_id: number; route_segments: string[] }[];
-}
-
-/**
- * Manifest version 2 stores route polylines in separate static JSON chunks.
- * The manifest appears only after all files were committed in one transaction.
- */
-async function loadRouteChunks(paths: string[]): Promise<Map<number, string[]>> {
-  const collected = new Map<number, string[]>();
-  // Limit concurrent downloads instead of flooding the server with 40+ files.
-  for (let start = 0; start < paths.length; start += 6) {
-    const group = await Promise.all(paths.slice(start, start + 6).map(async (path) => {
-      if (!/^data\/exports\/[a-z0-9]{16,48}\/chunk-\d{4}\.json$/.test(path)) {
-        throw new Error('Invalid route chunk path in preview manifest');
-      }
-      const response = await fetch(`${import.meta.env.BASE_URL}${path}`);
-      if (!response.ok) {
-        throw new Error(`Route chunk could not be fetched: ${path} (${response.status})`);
-      }
-      const chunk: RouteChunk = await response.json();
-      if (chunk.schema_version !== 1 || !Array.isArray(chunk.routes)) {
-        throw new Error(`Invalid route chunk format: ${path}`);
-      }
-      return chunk.routes;
-    }));
-    for (const routes of group) {
-      for (const route of routes) {
-        if (!Number.isInteger(route.run_id) || collected.has(route.run_id) ||
-            !Array.isArray(route.route_segments) ||
-            !route.route_segments.length ||
-            !route.route_segments.every((segment) => typeof segment === 'string')) {
-          throw new Error('Invalid or duplicated encoded route entry in preview');
-        }
-        collected.set(route.run_id, route.route_segments);
-      }
-    }
-  }
-  return collected;
-}
-
 let catalogCache: ActivityCatalog | null = null;
 let catalogError: unknown = null;
 let catalogPromise: Promise<ActivityCatalog> | null = null;
@@ -224,7 +183,8 @@ async function loadCatalog(): Promise<ActivityCatalog> {
               ? await loadRouteChunks(
                   Array.isArray(doc.route_chunks)
                     ? doc.route_chunks
-                    : (() => { throw new Error('Missing route chunk index'); })()
+                    : (() => { throw new Error('Missing route chunk index'); })(),
+                  import.meta.env.BASE_URL
                 )
               : null;
             const precision = resolveDatePrecision(doc.date_precision);
