@@ -15,7 +15,7 @@ export const unproject = (x: number, y: number): [number, number] => [
   Math.atan(Math.sinh(Math.PI * (1 - 2 * y / WORLD))) * 180 / Math.PI,
   x / WORLD * 360 - 180,
 ];
-function project(lat: number, lng: number): [number, number] | null {
+export function densityGridPoint(lat: number, lng: number): [number, number] | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
     Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   const radians = Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI / 180;
@@ -58,7 +58,7 @@ export function calculateRouteDensity(tracks: readonly DensityTrack[]): DensityR
       try { points = polyline.decode(route); } catch { continue; }
       let prior: [number, number] | null = null;
       for (const point of points) {
-        const current = project(point[0], point[1]);
+        const current = densityGridPoint(point[0], point[1]);
         if (prior && current) visit(prior, current, seen);
         prior = current;
       }
