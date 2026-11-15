@@ -89,6 +89,8 @@ test('map sources remain selected-user/year/sport/region scoped; worker is cance
   assert.match(map, /worker\?\.terminate\(\)/);
   assert.match(map, /viewMode === 'density' && !selectedActivity/);
   assert.match(map, /aria-pressed=\{viewMode === mode\}/);
-  assert.match(layer, /pointer-events/); // Canvas is non-interactive through the CSS class.
+  assert.match(layer, /route-map-density-canvas/);
+  assert.match(fs.readFileSync('src/components/RouteMap.css', 'utf8'),
+    /route-map-density-canvas[\\s\\S]*?pointer-events: none/);
   assert.match(worker, /calculateRouteDensity\(data\)/);
 });
