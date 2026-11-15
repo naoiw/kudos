@@ -135,7 +135,7 @@ Do not commit Google Drive IDs, email addresses, or tokens. Exported preview.jso
 
 ## 7. ウェブ画面へ名前・活動・GPS経路を反映する（手動エクスポート）
 
-**現状の `naoiw/kudos` はPublicリポジトリです。** この操作はGoogle Sheetsの表示名・活動情報、およびDriveのGPX/TCXを変換したGPS経路を `public/data/preview.json` にコミットします。**このファイルと経路は誰でも閲覧できます。** 今はテスト用GPXで動作確認し、実際の非公開データについてはPrivateリポジトリや認証対応を先に実施してください。
+**現状の `naoiw/kudos` はPublicリポジトリです。** この操作はGoogle Sheetsの表示名・活動情報、およびDriveのGPX/TCXを変換したGPS経路を `public/data/preview.json` にコミットします。**このファイルと経路は誰でも閲覧できます。** 非公開にすべきデータを扱う場合は、リポジトリの公開設定だけでなく**配信先のアクセス制御**まで整備してください。公開済みGPSを後から完全に回収することはできません。
 
 ### 7-1. 更新するソースと公開ファイル
 
@@ -197,7 +197,7 @@ Apps Scriptのプロジェクト設定にある **スクリプト プロパテ�
 - **途中のバッチはmainへ反映しません**。作業用Git Blobがそろうまで現在の公開サイトはそのままです。最終コミットは1回だけ行います
 - 大きなGPXを処理中に例外が発生した場合、完了済みチャンクの進捗を保持して停止します。同じ関数を再実行してください
 - `Users` / `Activities` / `Settings` をバッチ途中で変更した場合は、意図しないデータ混在を防ぐためエラーになります。原因と公開範囲を確認し、管理者が必要と判断した場合のみ`resetPublicPreviewBatch()`で途中の状態を破棄し、先頭から公開し直してください。**現在の公開サイトは変更されません**
-- 本方式は **公開済みの全アクティビティのGPXをバッチごとに読み出します**。初回に全件分のGPS経路をSheetsへ保存する必要はありません
+- 本方式は**1バッチの対象活動のGPXを最大8件ずつ読み出し**、未参照のGit Blobへ段階的に保存します。初回に全件分のGPS経路をSheetsへ保存する必要はありません
 - 現状は最大8件/回・処理予算180秒を`gas/06_BatchedPublish.gs`で定義しています。GASの6分制限に余裕を持たせていますが、**1つのGPXの解析だけで6分を超える場合は別途さらに対策が必要**です
 - 多数のファイルを扱うとGitHubへの公開データが数MBになることがあります。データ送信の対象と公開範囲を確認してください
 - **GitHubはPublicリポジトリ**です。JSONに含めたGPS座標は公開されます。将来Vercel/Cloudflareに移行しても、公開アクセスを止めるにはホスティング側でも認証が必要です
@@ -208,7 +208,7 @@ Apps Scriptのプロジェクト設定にある **スクリプト プロパテ�
 
 ## 8. 足跡マップと都道府県フォーカス
 
-Webアプリは `public/data/preview.json` の `summary_polyline` / `route_segments` を日本47都道府県のGeoJSONと照合して、**経路が通過したすべての都道府県**を訪問済みとして色付けします。GPXからGPS座標をSheetsへ追加する必要はありません。
+Webアプリは`public/data/preview.json`と`route_chunks`が指す経路チャンクを読み込み、`summary_polyline` / `route_segments`を日本47都道府県のGeoJSONと照合して、**経路が通過したすべての都道府県**を訪問済みとして色付けします。GPXからGPS座標をSheetsへ追加する必要はありません。
 
 都道府県をクリックすると、その都道府県を通過するアクティビティに絞り込み、ルートマップではその県内にある経路部分の範囲にフォーカスします。都道府県の輪郭だけではなく、実際の走行地点を優先します。
 
@@ -230,9 +230,9 @@ Webアプリの種目は次の3種類に統一します。画面上の選択肢�
 
 従来の `Run` は `Walk` に変換されます。未分類 `Unknown` は引き続き確認対象です。手動指定に使える値は `Ride`、`Walk`、`Golf`。旧 `Run` の手動指定も互換扱いで `Walk` に変換されます。
 
-**すでに取り込み済みの活動を再判定するには：** GASの `00_Config.gs`、`01_Sheets.gs`、`02_Parser.gs`、`05_PublicPreview.gs` を更新して `applyActivityOverrides()` を1回実行してください。既存GPXの再取り込みは不要です。
+**すでに取り込み済みの活動を再判定するには：** 共通ルールの変更が必要なら[種目ルール更新手順](../docs/sport-rules.md)で生成済みGASコードを更新し、[claspでソースを同期](../docs/gas-clasp-sync.md)してください。その後`applyActivityOverrides()`を明示的に実行します。既存GPXの再取り込みは不要です。
 
-Webアプリ側でも旧形式の公開JSONについてタイトルを用いた互換判定を行うため、**既に公開した経路データをすべて再Publishしなくても種目のフィルタ表示を更新できます**。今後 `publishApprovedPublicPreview()` を実行した際は、GAS側が判定した種目と手動指定を尊重するため `genre_version: 1` が公開JSONに付与されます。
+Webアプリ側でも旧形式の公開JSONについてタイトルを用いた互換判定を行うため、**既に公開した経路データをすべて再Publishしなくても種目のフィルタ表示を更新できます**。現行の公開JSONはすでに`genre_version: 1`を含み、GAS側の種目判定と手動指定を尊重します。
 
 定期実行を有効化するものではありません。スケジュールは開発完了まで無効のままにしてください。
 
@@ -246,7 +246,7 @@ Webアプリ側でも旧形式の公開JSONについてタイトルを用いた�
 
 ## 12. 不変な公開run_id
 
-`run_id`はSheetsに格納した非公開`activity_id`のSHA-256先頭48bitを数値化して付与します。元のDrive ID、ユーザーID、activity_idは公開しません。公開前に欠損と重複IDを検証し、異常があれば公開を中断します。詳細は[`docs/stable-activity-ids.md`](../docs/stable-activity-ids.md)を参照してください。過去に公開したデータはそのまま残り、今後手動で再PublishしたときにIDが切り替わります。経路チャンクも同じIDを使用します。
+`run_id`はSheetsに格納した非公開`activity_id`のSHA-256先頭48bitを数値化して付与します。元のDrive ID、ユーザーID、activity_idは公開しません。公開前に欠損と重複IDを検証し、異常があれば公開を中断します。詳細は[`docs/stable-activity-ids.md`](../docs/stable-activity-ids.md)を参照してください。現在公開中の`preview.json`はすでに`id_version: 1`です。旧連番IDの公開JSONだけが、安定ID方式で初めて再PublishするときにIDを切り替えます。経路チャンクも同じ公開IDを使用します。
 
 ## 13. 公開日時の精度
 
