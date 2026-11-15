@@ -50,6 +50,8 @@ src/themes/dashboard/index.tsx
 | `src/components/SummaryPage.tsx` | Life／年／月の期間選択と種目別統計・距離チャート |
 | `src/core/prefectureRoutes.ts`、`src/core/countryRoutes.ts` | GPSと日本の都道府県／世界の国・地域境界の照合 |
 | `src/components/RouteMapCanvas.tsx` | Leaflet地図と選択経路の描画、OpenStreetMapタイルの表示 |
+| `src/core/routeDensity.ts`、`src/workers/routeDensity.worker.ts` | 既存のGPS Polylineをグリッド単位で集約。アクティビティ内の重複通過を1回に数え、Workerで計算する |
+| `src/components/RouteDensityOverlay.tsx` | Leafletのズーム・移動に追従する非インタラクティブCanvasで通過頻度を描画する |
 | `src/core/trackGeometry.ts` | ルート一覧のEncoded Polyline→サムネイル形状生成 |
 | `src/core/goals.ts` | 初期目標と`localStorage`のユーザー別目標の読み書き |
 
@@ -60,6 +62,14 @@ src/themes/dashboard/index.tsx
 - `CalendarWidget`は表示ユーザーの全活動を受け取って最古月を決定します。月の前後移動によって年を越えた場合、Dashboardが上部の年フィルターを更新し、移動先の月を保持します。「すべての年」は年境界でも維持します。
 - 日付選択時、カレンダーとヒートマップは同日の開始時刻が最も早い活動を選択し、地図へ渡します。別の活動も日別一覧から選択できます。
 - 日付の`date_precision=month`時には実在する日付がないため、日別のカレンダーとヒートマップは表示しません。
+
+### 密度マップのデータ境界
+
+- Dashboardの`RouteMap`には選択ユーザー、年、種目、地域で絞った`filtered`だけを渡します。密度Workerに送るのは**この配列のEncoded Polylineだけ**で、別ユーザーの経路を横断して取得しません。
+- 訪問数はWeb Mercator zoom 14の12pxグリッド（日本では概ね80m）単位で1アクティビティにつき1回までとします。線分が通った区画を検出し、トラックの欠損や極端なGPSジャンプを別扱いにします。日単位・速度などのデータは公開しません。
+- Workerはフィルター切替・地図アンマウント時にterminateし、古い計算結果を反映しません。描画はCanvasとLeafletの移動イベントを使い、地図の操作をブロックしません。
+- 現在は既存manifest v2の経路をフロント側で読み込みます。Issue #19の遅延取得・#20の事前地域集計は別途対応し、Sheet／GASの変更は本機能に含めません。
+- 地図の濃淡はGPSが公開されている前提です。訪問が多い場所や起終点から生活拠点が推測され得るため、公開許可と必要な秘匿処理を先に検討してください。
 
 ## 公開JSONの取り扱い
 
