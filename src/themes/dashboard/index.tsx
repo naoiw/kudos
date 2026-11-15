@@ -309,8 +309,9 @@ function Dashboard() {
                   setSummaryPeriod('year');
                 }
                 if (page === 'compare') {
-                  // All-years represents Life; choosing a year shows yearly comparison.
-                  setComparisonPeriod(value === null ? 'life' : 'year');
+                  // Keep a selected month when changing years; all-years returns to Life.
+                  if (value === null) setComparisonPeriod('life');
+                  else if (comparisonPeriod === 'life') setComparisonPeriod('year');
                 }
                 setYear(value);
                 setCalendarNavigationMonth(null);
