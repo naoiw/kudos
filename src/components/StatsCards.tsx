@@ -3,6 +3,7 @@ import type { Activity, SportFilter } from '../types';
 import { formatDistance, parseMovingTime } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
 import { getGoalForFilter, type SportGoals } from '../core/goals';
+import { sportMetrics } from '../core/sportMetrics';
 import type { DatePrecision } from '../core/datePrecision';
 
 interface StatsCardsProps {
@@ -48,6 +49,15 @@ export const StatsCards = memo(function StatsCards({
   });
   const yearDistance = yearActivities.reduce((s, a) => s + a.distance, 0);
   const yearCount = yearActivities.length;
+  const yearHighlights = sportMetrics(yearActivities, filter, locale, datePrecision)
+    .filter(metric => filter === 'Ride'
+      ? (metric.key === 'averageSpeed' || metric.key === 'elevationGain')
+      : filter === 'Walk'
+        ? (metric.key === 'averagePace' || metric.key === 'longestStreak')
+        : filter === 'Golf'
+          ? (metric.key === 'walkingDistance' || metric.key === 'averageDistance')
+          : (metric.key === 'rideCount' || metric.key === 'walkCount' || metric.key === 'golfCount'));
+
   const yearSeconds = yearActivities.reduce(
     (s, a) => s + parseMovingTime(a.moving_time),
     0
@@ -351,6 +361,11 @@ export const StatsCards = memo(function StatsCards({
             />
           </svg>
           {t('yearlyGoal')} ({currentYear})
+          {filter === 'Golf' && (
+            <span className="ml-1 normal-case tracking-normal">
+              · {locale === 'ja' ? '歩行距離' : 'Distance walked'}
+            </span>
+          )}
         </p>
         <p className="font-mono text-3xl font-bold whitespace-nowrap">
           {goal.unit === 'time'
@@ -399,6 +414,13 @@ export const StatsCards = memo(function StatsCards({
             : `${formatDistance(Math.abs(yearDiff))} km`}{' '}
           {t('vsLastYear')}
         </p>}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--color-border)] pt-2 text-xs text-[var(--color-muted)]">
+          {yearHighlights.map(metric => (
+            <span key={metric.key}>
+              {metric.label}: <strong className="font-medium text-[var(--color-text)]">{metric.value}</strong>
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Monthly Goal */}

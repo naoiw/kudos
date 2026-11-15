@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { sportIcon, sportLabel } from '../core/sports';
-import { formatDuration, formatPace } from '../hooks/useActivities';
+import { formatDuration } from '../hooks/useActivities';
+import { activityMotionValue } from '../core/sportMetrics';
 import { useLocale } from '../hooks/useLocale';
 import { formatActivityDate, type DatePrecision } from '../core/datePrecision';
 
@@ -23,15 +24,18 @@ export function ActivityLog({
   activities,
   selectedActivity,
   onSelectActivity,
+  filter = 'all',
 }: ActivityLogProps) {
   const { t, locale } = useLocale();
   const [page, setPage] = useState(0);
   const [distFilter, setDistFilter] = useState<DistanceFilter>('all');
+  // Golf has walking-distance totals, but no race-style distance rankings.
+  const effectiveDistanceFilter = filter === 'Golf' ? 'all' : distFilter;
 
   const sorted = useMemo(() => {
     const filtered = activities.filter((a) => {
       const km = a.distance / 1000;
-      switch (distFilter) {
+      switch (effectiveDistanceFilter) {
         case '10':
           return km >= 10;
         case '20':
@@ -46,7 +50,7 @@ export function ActivityLog({
       (a, b) =>
         b.start_date_local.localeCompare(a.start_date_local)
     );
-  }, [activities, distFilter]);
+  }, [activities, effectiveDistanceFilter]);
   const selectedId = selectedActivity?.run_id;
   const [previousSelection, setPreviousSelection] = useState(selectedId);
   const [previousSorted, setPreviousSorted] = useState(sorted);
@@ -84,8 +88,8 @@ export function ActivityLog({
         </span>
       </div>
 
-      {/* Distance filter */}
-      <div
+      {/* Distance thresholds apply to cycling and walking, not golf rounds. */}
+      {filter !== 'Golf' && <div
         role="group"
         aria-label={locale === 'ja' ? '距離フィルター' : 'Distance filter'}
         className="mb-5 flex items-center gap-2"
@@ -111,12 +115,12 @@ export function ActivityLog({
             {label}
           </button>
         ))}
-      </div>
+      </div>}
 
       <p className="table-scroll-hint mb-2 text-xs text-[var(--color-muted)]">
         {locale === 'ja'
           ? '横にスクロールして詳細を表示。履歴をクリックすると経路を確認できます'
-          : 'Swipe for more details; select a run to view its route'}
+          : 'Swipe for more details; select an activity to view its route'}
       </p>
       {/* Table */}
       <div className="overflow-x-auto">
@@ -130,7 +134,15 @@ export function ActivityLog({
               <th className="pb-3 font-medium">{t('name')}</th>
               <th className="pb-3 font-medium">{t('distance')}</th>
               <th className="pb-3 font-medium">{t('duration')}</th>
-              <th className="pb-3 font-medium">{t('pace')}</th>
+              {filter !== 'Golf' && (
+                <th className="pb-3 font-medium">
+                  {filter === 'Ride'
+                    ? (locale === 'ja' ? '平均速度' : 'Average speed')
+                    : filter === 'Walk'
+                      ? t('pace')
+                      : (locale === 'ja' ? '速度／ペース' : 'Speed / pace')}
+                </th>
+              )}
               <th className="pb-3 font-medium">{t('hr')}</th>
             </tr>
           </thead>
@@ -138,7 +150,7 @@ export function ActivityLog({
             {!pageData.length && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={filter === 'Golf' ? 6 : 7}
                   className="py-10 text-center text-[var(--color-muted)]"
                 >
                   {locale === 'ja'
@@ -189,9 +201,11 @@ export function ActivityLog({
                 <td className="py-3 text-[var(--color-muted)]">
                   {formatDuration(a.moving_time)}
                 </td>
-                <td className="py-3 text-[var(--color-muted)]">
-                  {formatPace(a.average_speed)}
-                </td>
+                {filter !== 'Golf' && (
+                  <td className="py-3 text-[var(--color-muted)]">
+                    {activityMotionValue(a)}
+                  </td>
+                )}
                 <td className="py-3 text-[var(--color-muted)]">
                   {a.average_heartrate ? Math.round(a.average_heartrate) : '--'}
                 </td>

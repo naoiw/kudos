@@ -305,6 +305,7 @@ function Dashboard() {
             key={`${year ?? 'all'}-${filter}`}
             datePrecision={catalog.datePrecision}
             activities={baseFiltered}
+            filter={filter}
             onSelectActivity={(activity) => {
               navigate('home');
               selectActivity(activity);
