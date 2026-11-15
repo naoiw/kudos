@@ -8,13 +8,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { Activity } from '../types';
+import type { Activity, SportFilter } from '../types';
 import type { DatePrecision } from '../core/datePrecision';
 import { useLocale } from '../hooks/useLocale';
-import { formatPace } from '../hooks/useActivities';
+import { sportMetrics } from '../core/sportMetrics';
 import {
   groupSummary,
-  summarize,
   summaryChart,
   type SummaryPeriod,
 } from '../utils/summary';
@@ -31,6 +30,7 @@ function SummaryCard({
   period,
   label,
   isJapanese,
+  filter,
   onSelectActivity,
   monthOnly,
 }: {
@@ -39,39 +39,13 @@ function SummaryCard({
   monthOnly: boolean;
   label: string;
   isJapanese: boolean;
+  filter: SportFilter;
   onSelectActivity: (a: Activity) => void;
 }) {
-  const stats = summarize(activities);
   const chartAvailable = !monthOnly || period !== 'month';
   const chart = chartAvailable ? summaryChart(activities, period, label) : [];
-  const metrics = [
-    [isJapanese ? '活動回数' : 'Activities', String(stats.count)],
-    [
-      isJapanese ? '運動時間' : 'Moving time',
-      `${Math.floor(stats.seconds / 3600)}h ${Math.floor((stats.seconds % 3600) / 60)}m`,
-    ],
-    [
-      isJapanese ? '平均ペース' : 'Average pace',
-      stats.speed > 0 ? `${formatPace(stats.speed)} /km` : '—',
-    ],
-    [
-      isJapanese ? '平均心拍数' : 'Average heart rate',
-      stats.heartRate ? `${Math.round(stats.heartRate)} bpm` : '—',
-    ],
-    [
-      isJapanese ? '最長距離' : 'Longest activity',
-      `${number(stats.maxDistance / 1000)} km`,
-    ],
-    [
-      isJapanese ? '最速ペース' : 'Fastest pace',
-      stats.maxSpeed > 0 ? `${formatPace(stats.maxSpeed)} /km` : '—',
-    ],
-    [
-      isJapanese ? '平均距離' : 'Average distance',
-      `${number(stats.distance / stats.count / 1000)} km`,
-    ],
-    [isJapanese ? '累積獲得標高' : 'Elevation gain', `${number(stats.elevation)} m`],
-  ];
+  const metrics = sportMetrics(activities, filter, isJapanese ? 'ja' : 'en',
+    monthOnly ? 'month' : null);
   const chartUnit =
     period === 'life'
       ? isJapanese
@@ -103,15 +77,15 @@ function SummaryCard({
             : label}
         </h2>
         <p className="text-2xl font-semibold text-[var(--color-accent)] tabular-nums">
-          {number(stats.distance / 1000)}{' '}
+          {number(activities.reduce((sum, item) => sum + item.distance, 0) / 1000)}{' '}
           <span className="text-sm font-normal text-[var(--color-muted)]">
-            km
+            {filter === 'Golf' && (isJapanese ? '歩行距離 · ' : 'Walked · ')}km
           </span>
         </p>
       </div>
       <dl className="my-5 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
-        {metrics.map(([name, value]) => (
-          <div key={name}>
+        {metrics.map(({ key, label: name, value }) => (
+          <div key={key}>
             <dt className="text-xs text-[var(--color-muted)]">{name}</dt>
             <dd className="mt-1 text-sm font-medium tabular-nums">{value}</dd>
           </div>
@@ -197,10 +171,12 @@ function SummaryCard({
 
 export function SummaryPage({
   activities,
+  filter,
   onSelectActivity,
   datePrecision,
 }: {
   activities: Activity[];
+  filter: SportFilter;
   onSelectActivity: (a: Activity) => void;
   datePrecision?: DatePrecision | null;
 }) {
@@ -285,6 +261,7 @@ export function SummaryPage({
               key={key}
               label={key}
               activities={items}
+              filter={filter}
               period={period}
               isJapanese={isJapanese}
               monthOnly={monthOnly}
