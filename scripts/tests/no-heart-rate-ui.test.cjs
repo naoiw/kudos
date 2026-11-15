@@ -52,7 +52,7 @@ test('summary no longer calculates heart rate while retaining historic data sche
     fileName: 'src/utils/summary.ts',
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  const exports = {};
+  const moduleExports = {};
   new Function('require', 'exports', compiled)(
     name => {
       if (name === '../hooks/useActivities') {
@@ -60,9 +60,9 @@ test('summary no longer calculates heart rate while retaining historic data sche
       }
       throw new Error('Unexpected import: ' + name);
     },
-    exports
+    moduleExports
   );
-  const summary = exports.summarize([
+  const summary = moduleExports.summarize([
     { distance: 1000, moving_time: '00:02:00', average_heartrate: 140 },
   ]);
   assert.equal(summary.count, 1);
