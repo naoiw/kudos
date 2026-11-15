@@ -1,10 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Activity } from '../types';
 import { formatDistance } from '../hooks/useActivities';
 import { useLocale } from '../hooks/useLocale';
+import {
+  activityMonth,
+  calendarMonthBounds,
+  clampCalendarMonth,
+  isMonthWithinBounds,
+} from '../core/calendarMonthBounds';
 
 interface CalendarWidgetProps {
   activities: Activity[];
+  allActivities: Activity[];
   yearFilter: number | null;
   selectedActivity?: Activity | null;
   onSelectActivity: (activity: Activity | null) => void;
@@ -12,6 +19,7 @@ interface CalendarWidgetProps {
 
 export function CalendarWidget({
   activities,
+  allActivities,
   yearFilter,
   selectedActivity,
   onSelectActivity,
@@ -19,6 +27,10 @@ export function CalendarWidget({
   const { locale } = useLocale();
   const isJapanese = locale === 'ja';
   const [today] = useState(() => new Date());
+  const bounds = useMemo(
+    () => calendarMonthBounds(allActivities, today, yearFilter),
+    [allActivities, today, yearFilter]
+  );
   const latest = useMemo(
     () =>
       activities.reduce(
@@ -29,16 +41,15 @@ export function CalendarWidget({
   );
   const initial = selectedActivity?.start_date_local || latest;
   const [month, setMonth] = useState(() => {
-    const date = initial
-      ? new Date(initial)
-      : yearFilter === null
+    const date = activityMonth(initial) ??
+      (yearFilter === null
         ? today
-        : new Date(yearFilter, today.getMonth(), 1);
-    return new Date(date.getFullYear(), date.getMonth(), 1);
+        : new Date(yearFilter, today.getMonth(), 1));
+    return clampCalendarMonth(date, bounds);
   });
   const [day, setDay] = useState<number | null>(() =>
     selectedActivity
-      ? new Date(selectedActivity.start_date_local).getDate()
+      ? Number(selectedActivity.start_date_local.slice(8, 10))
       : null
   );
   const [previousSelection, setPreviousSelection] = useState(
@@ -47,11 +58,22 @@ export function CalendarWidget({
   if (previousSelection !== selectedActivity?.run_id) {
     setPreviousSelection(selectedActivity?.run_id);
     if (selectedActivity) {
-      const date = new Date(selectedActivity.start_date_local);
-      setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-      setDay(date.getDate());
+      const date = activityMonth(selectedActivity.start_date_local);
+      if (date) {
+        setMonth(clampCalendarMonth(date, bounds));
+        setDay(isMonthWithinBounds(date, bounds)
+          ? Number(selectedActivity.start_date_local.slice(8, 10))
+          : null);
+      }
     }
   }
+  // Update an already mounted calendar when its user's history boundaries change.
+  useEffect(() => {
+    if (!isMonthWithinBounds(month, bounds)) {
+      setMonth(clampCalendarMonth(month, bounds));
+      setDay(null);
+    }
+  }, [month, bounds]);
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const byDay = useMemo(() => {
@@ -75,13 +97,13 @@ export function CalendarWidget({
   const dayActivities = day === null ? [] : (byDay.get(day) ?? []);
   const moveMonth = (delta: number) => {
     const next = new Date(year, monthIndex + delta, 1);
-    if (yearFilter !== null && next.getFullYear() !== yearFilter) return;
+    if (!isMonthWithinBounds(next, bounds)) return;
     setMonth(next);
     setDay(null);
   };
   const goToDate = (date: Date) => {
     const targetYear = yearFilter ?? date.getFullYear();
-    setMonth(new Date(targetYear, date.getMonth(), 1));
+    setMonth(clampCalendarMonth(new Date(targetYear, date.getMonth(), 1), bounds));
     setDay(null);
   };
   const monthLabel = month.toLocaleDateString(isJapanese ? 'ja-JP' : 'en-US', {
@@ -99,7 +121,7 @@ export function CalendarWidget({
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(-1)}
-            disabled={yearFilter !== null && year === yearFilter && monthIndex === 0}
+            disabled={!isMonthWithinBounds(new Date(year, monthIndex - 1, 1), bounds)}
             aria-label={isJapanese ? '前月' : 'Previous month'}
           >
             ←
@@ -107,7 +129,7 @@ export function CalendarWidget({
           <button
             className="rounded px-2 text-sm"
             onClick={() => moveMonth(1)}
-            disabled={yearFilter !== null && year === yearFilter && monthIndex === 11}
+            disabled={!isMonthWithinBounds(new Date(year, monthIndex + 1, 1), bounds)}
             aria-label={isJapanese ? '翌月' : 'Next month'}
           >
             →

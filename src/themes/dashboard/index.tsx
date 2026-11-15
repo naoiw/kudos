@@ -447,10 +447,11 @@ function Dashboard() {
                 </div>
                 {catalog.datePrecision !== 'month' && (
                   <CalendarWidget
-                    key={`${year ?? 'all'}-${filter}-${selectedPrefecture ?? selectedCountry ?? 'all'}`}
+                    key={`${currentUser.user_id}-${year ?? 'all'}-${filter}-${selectedPrefecture ?? selectedCountry ?? 'all'}`}
                     yearFilter={year}
                     selectedActivity={selectedActivity}
                     activities={filtered}
+                    allActivities={activities}
                     onSelectActivity={selectActivity}
                   />
                 )}
