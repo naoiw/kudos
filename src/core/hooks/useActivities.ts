@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Activity, SportFilter } from '../types';
 import { resolveActivitySport } from '../sports';
 import { activityYear, normalizePublicDate, resolveDatePrecision } from '../datePrecision';
+import { filterActivities } from '../activityFilters';
 import { loadRouteChunks } from '../routeChunks';
 
 // Detect Japanese prefectures in optional human-readable location metadata.
@@ -20,18 +21,10 @@ export function useFilteredActivities(
   filter: SportFilter,
   year: number | null
 ) {
-  return useMemo(() => {
-    let filtered = activities;
-    if (filter !== 'all') {
-      filtered = filtered.filter((a) => a.type === filter);
-    }
-    if (year) {
-      filtered = filtered.filter((a) => {
-        return activityYear(a.start_date_local) === year;
-      });
-    }
-    return filtered;
-  }, [activities, filter, year]);
+  return useMemo(
+    () => filterActivities(activities, filter, year),
+    [activities, filter, year]
+  );
 }
 
 export function parseMovingTime(
