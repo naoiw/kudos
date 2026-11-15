@@ -54,9 +54,9 @@ test('calendar stays in the globally selected year, including empty sport filter
   const dashboard = source('src/themes/dashboard/index.tsx');
   assert.match(dashboard, /<CalendarWidget[\s\S]*?yearFilter=\{year\}/);
   assert.match(calendar, /yearFilter === null\s*\?\s*today\s*:\s*new Date\(yearFilter, today\.getMonth\(\), 1\)/);
-  assert.match(calendar, /yearFilter !== null && next\.getFullYear\(\) !== yearFilter/);
-  assert.match(calendar, /yearFilter !== null && year === yearFilter && monthIndex === 0/);
-  assert.match(calendar, /yearFilter !== null && year === yearFilter && monthIndex === 11/);
+  assert.match(calendar, /!isMonthWithinBounds\(next, bounds\)/);
+  assert.match(calendar, /disabled=\{!isMonthWithinBounds\(new Date\(year, monthIndex - 1, 1\), bounds\)\}/);
+  assert.match(calendar, /disabled=\{!isMonthWithinBounds\(new Date\(year, monthIndex \+ 1, 1\), bounds\)\}/);
   assert.match(calendar, /yearFilter === null \|\| yearFilter === today\.getFullYear\(\)/);
   assert.ok(dashboard.indexOf('One year selection controls') <
     dashboard.indexOf('{editingGoals && ('));
