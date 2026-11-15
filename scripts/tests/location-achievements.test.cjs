@@ -36,8 +36,16 @@ const geography = loadTs('src/core/prefectureRoutes.ts', {
   '@mapbox/polyline': polyline,
   '../assets/japan-prefectures.json': boundaries,
 });
+const worldBoundaries = JSON.parse(
+  fs.readFileSync(path.join('src', 'assets', 'world-countries.json'), 'utf8')
+);
+const countries = loadTs('src/core/countryRoutes.ts', {
+  '@mapbox/polyline': polyline,
+  '../assets/world-countries.json': worldBoundaries,
+});
 const achievements = loadTs('src/core/locationAchievements.ts', {
   './prefectureRoutes': geography,
+  './countryRoutes': countries,
 });
 const activity = (segments, country = null, type = 'Ride') => ({
   type,
