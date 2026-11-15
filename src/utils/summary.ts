@@ -1,46 +1,10 @@
 import type { Activity } from '../types';
-import { parseMovingTime } from '../hooks/useActivities';
-
-export type SummaryPeriod = 'year' | 'month' | 'week' | 'day' | 'life';
+export type SummaryPeriod = 'life' | 'year' | 'month';
 
 // Use the recorded local calendar date, independent of the viewer's timezone.
 export function summaryKey(date: string, period: SummaryPeriod): string {
   if (period === 'life') return 'Life';
-  if (period === 'year') return date.slice(0, 4);
-  if (period === 'month') return date.slice(0, 7);
-  if ((period === 'day' || period === 'week') &&
-      /^\d{4}-\d{2}$/.test(date)) {
-    throw new Error('Day/week statistics require exact public dates.');
-  }
-  if (period === 'day') return date.slice(0, 10);
-  const day = new Date(`${date.slice(0, 10)}T00:00:00Z`);
-  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
-  const year = day.getUTCFullYear();
-  const week = Math.ceil(
-    ((day.getTime() - Date.UTC(year, 0, 1)) / 86400000 + 1) / 7
-  );
-  return `${year}-W${String(week).padStart(2, '0')}`;
-}
-
-export function summarize(activities: Activity[]) {
-  const distance = activities.reduce((sum, a) => sum + a.distance, 0);
-  const seconds = activities.reduce(
-    (sum, a) => sum + parseMovingTime(a.moving_time),
-    0
-  );
-  const speeds = activities.map((a) => {
-    const time = parseMovingTime(a.moving_time);
-    return time > 0 ? a.distance / time : 0;
-  });
-  return {
-    distance,
-    seconds,
-    count: activities.length,
-    speed: seconds > 0 ? distance / seconds : 0,
-    maxDistance: Math.max(0, ...activities.map((a) => a.distance)),
-    maxSpeed: Math.max(0, ...speeds),
-    elevation: activities.reduce((sum, a) => sum + (a.elevation_gain ?? 0), 0),
-  };
+  return period === 'year' ? date.slice(0, 4) : date.slice(0, 7);
 }
 
 export function groupSummary(activities: Activity[], period: SummaryPeriod) {
@@ -61,23 +25,19 @@ export function summaryChart(
 ) {
   const buckets = new Map<string, number>();
   const bucketFor = (a: Activity) => {
-    const date = a.start_date_local.slice(0, 10);
+    const date = a.start_date_local;
     if (period === 'life') return date.slice(0, 4);
     if (period === 'year') return date.slice(5, 7);
-    if (period === 'month') return date.slice(8, 10);
-    if (period === 'week')
-      return String(((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1);
-    return a.start_date_local.slice(11, 16);
+    return date.slice(8, 10);
   };
-  let length = 0;
-  if (period === 'year') length = 12;
-  if (period === 'month')
-    length = new Date(
-      Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0)
-    ).getUTCDate();
-  if (period === 'week') length = 7;
+  // Life is a variable-length year series; year/month retain stable empty buckets.
+  const length = period === 'year'
+    ? 12
+    : period === 'month'
+      ? new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0)).getUTCDate()
+      : 0;
   for (let i = 1; i <= length; i++)
-    buckets.set(period === 'week' ? String(i) : String(i).padStart(2, '0'), 0);
+    buckets.set(String(i).padStart(2, '0'), 0);
   for (const activity of activities) {
     const bucket = bucketFor(activity);
     buckets.set(bucket, (buckets.get(bucket) ?? 0) + activity.distance / 1000);
