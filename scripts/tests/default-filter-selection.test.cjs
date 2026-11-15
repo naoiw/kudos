@@ -9,10 +9,10 @@ test('initial activity filters default to all sports and the latest available ye
   const activities = fs.readFileSync('src/core/hooks/useActivities.ts', 'utf8');
 
   assert.match(dashboard, /const \[filter, setFilter\] = useState<SportFilter>\('all'\)/);
-  assert.match(dashboard,
-    /const \[year, setYear\] = useState<number \| null>\(\s*\(\) => pageFromPath\(\) === 'summary'\s*\?\s*null\s*:\s*getAvailableYears\(activities\)\[0\] \?\? null\s*\)/);
+  assert.match(dashboard, /pageFromPath\(\) === 'summary' \|\| pageFromPath\(\) === 'compare'/);
+  assert.match(dashboard, /getAvailableYears\(activities\)\[0\] \?\? null/);
   assert.match(activities, /return Array\.from\(years\)\.sort\(\(a, b\) => b - a\)/);
-  assert.match(dashboard, /const years = useMemo\(\(\) => getAvailableYears\(activities\), \[activities\]\)/);
+  assert.match(dashboard, /getAvailableYears\(page === 'compare' \? catalog\.activities : activities\)/);
 });
 
 test('switching users selects their latest year and all sports', () => {
