@@ -23,6 +23,7 @@ function loadTs(file, dependencies) {
   return exported;
 }
 const range = loadTs('src/core/calendarMonthBounds.ts', {});
+const activityDays = loadTs('src/core/activityDays.ts', {});
 const activity = (id, local) => ({
   run_id: id, start_date_local: local, type: 'Ride',
   name: 'Cycling', distance: 2000, moving_time: '00:10:00',
@@ -62,6 +63,7 @@ function calendarInstance() {
     '../hooks/useActivities': { formatDistance: value => String(value / 1000) },
     '../hooks/useLocale': { useLocale: () => ({ locale: 'ja' }) },
     '../core/calendarMonthBounds': range,
+    '../core/activityDays': activityDays,
   });
   return props => {
     nextHook = 0;
