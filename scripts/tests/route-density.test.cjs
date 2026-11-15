@@ -38,6 +38,8 @@ test('a grid cell is counted once per activity, not once per GPS point or return
   assert.ok(result.cells.length > 2);
   assert.ok(result.cells.every(cell => cell.count === 2));
   assert.equal(result.maxCount, 2);
+  const projected = density.densityGridPoint(a[0], a[1]);
+  assert.ok(projected?.every(Number.isFinite));
   assert.equal(density.densityColor(1), '#2563eb');
   assert.equal(density.densityColor(2), '#f59e0b');
   assert.equal(density.densityColor(4), '#ef4444');
