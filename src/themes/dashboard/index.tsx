@@ -25,8 +25,10 @@ import { RouteMap } from '@/components/RouteMap';
 import { CalendarWidget } from '@/components/CalendarWidget';
 import { ProfileCard } from '@/components/ProfileCard';
 import { JapanMap } from '@/components/JapanMap';
+import { WorldMap } from '@/components/WorldMap';
 import { SPORT_ORDER, SPORT_DETAILS } from '@/core/sports';
 import { prefecturesForActivity } from '@/core/prefectureRoutes';
+import { countriesForActivity } from '@/core/countryRoutes';
 import { activityYear } from '@/core/datePrecision';
 import {
   defaultSportGoals,
@@ -79,6 +81,8 @@ function Dashboard() {
   const { t, locale } = useLocale();
   const [filter, setFilter] = useState<SportFilter>('all');
   const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [footprintMode, setFootprintMode] = useState<'japan' | 'world'>('japan');
   const [year, setYear] = useState<number | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
@@ -118,6 +122,7 @@ function Dashboard() {
     setSelectedUserId(userId);
     setSelectedActivity(null);
     setSelectedPrefecture(null);
+    setSelectedCountry(null);
     setYear(null);
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('u', userId);
@@ -138,14 +143,19 @@ function Dashboard() {
   const years = useMemo(() => getAvailableYears(activities), [activities]);
   const yearFiltered = useFilteredActivities(activities, 'all', year);
   const baseFiltered = useFilteredActivities(activities, filter, year);
-  const filtered = useMemo(
-    () => selectedPrefecture
-      ? baseFiltered.filter((activity) =>
-          prefecturesForActivity(activity).includes(selectedPrefecture)
-        )
-      : baseFiltered,
-    [baseFiltered, selectedPrefecture]
-  );
+  const filtered = useMemo(() => {
+    if (selectedPrefecture) {
+      return baseFiltered.filter((activity) =>
+        prefecturesForActivity(activity).includes(selectedPrefecture)
+      );
+    }
+    if (selectedCountry) {
+      return baseFiltered.filter((activity) =>
+        countriesForActivity(activity).includes(selectedCountry)
+      );
+    }
+    return baseFiltered;
+  }, [baseFiltered, selectedPrefecture, selectedCountry]);
 
   const selectActivity = useCallback(
     (activity: Activity | null) => {
@@ -209,7 +219,12 @@ function Dashboard() {
       <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 pt-3 sm:px-6" role="group" aria-label="種目で絞り込み">
         {([['all', 'すべて'] as const, ...SPORT_ORDER.map((sport) => [sport, SPORT_DETAILS[sport].ja] as const)]).map(([value, label]) => (
           <button key={value} type="button" aria-pressed={filter === value}
-            onClick={() => { setFilter(value); setSelectedActivity(null); }}
+            onClick={() => {
+              setFilter(value);
+              setSelectedActivity(null);
+              setSelectedPrefecture(null);
+              setSelectedCountry(null);
+            }}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filter === value ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]' : 'bg-[var(--color-card)] text-[var(--color-muted)] hover:text-[var(--color-text)]'}`}>
             {label}
           </button>
@@ -240,6 +255,7 @@ function Dashboard() {
                 setYear(value);
                 setSelectedActivity(null);
                 setSelectedPrefecture(null);
+                setSelectedCountry(null);
               }}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${year === value
                 ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
@@ -336,19 +352,53 @@ function Dashboard() {
               {/* Right column */}
               <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
                 <ProfileCard activities={yearFiltered} filter={filter} />
-                <JapanMap
-                  activities={baseFiltered}
-                  selectedPrefecture={selectedPrefecture}
-                  onSelectPrefecture={(name) => {
-                    setSelectedPrefecture(name);
-                    setSelectedActivity(null);
-                  }}
-                />
+                <div>
+                  <div className="mb-2 flex flex-wrap gap-2" role="group"
+                    aria-label={locale === 'ja' ? '足跡マップの範囲' : 'Footprint map scope'}>
+                    {(['japan', 'world'] as const).map((mode) => (
+                      <button key={mode} type="button" aria-pressed={footprintMode === mode}
+                        onClick={() => {
+                          setFootprintMode(mode);
+                          setSelectedPrefecture(null);
+                          setSelectedCountry(null);
+                          setSelectedActivity(null);
+                        }}
+                        className={footprintMode === mode
+                          ? 'rounded-full bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-on-accent)]'
+                          : 'rounded-full bg-[var(--color-card)] px-4 py-1.5 text-sm font-medium text-[var(--color-muted)]'}>
+                        {mode === 'japan'
+                          ? (locale === 'ja' ? '日本（都道府県）' : 'Japan prefectures')
+                          : (locale === 'ja' ? '世界（国・地域）' : 'World countries')}
+                      </button>
+                    ))}
+                  </div>
+                  {footprintMode === 'japan' ? (
+                    <JapanMap
+                      activities={baseFiltered}
+                      selectedPrefecture={selectedPrefecture}
+                      onSelectPrefecture={(name) => {
+                        setSelectedPrefecture(name);
+                        setSelectedCountry(null);
+                        setSelectedActivity(null);
+                      }}
+                    />
+                  ) : (
+                    <WorldMap
+                      activities={baseFiltered}
+                      selectedCountry={selectedCountry}
+                      onSelectCountry={(code) => {
+                        setSelectedCountry(code);
+                        setSelectedPrefecture(null);
+                        setSelectedActivity(null);
+                      }}
+                    />
+                  )}
+                </div>
                 <div ref={routeSectionRef} className="scroll-mt-28">
                   <RouteMap
                     focusedPrefecture={selectedPrefecture}
                     activities={filtered}
-                    allActivities={baseFiltered}
+                    allActivities={filtered}
                     selectedActivity={selectedActivity}
                     dark={dark}
                     onClearSelection={() => setSelectedActivity(null)}
@@ -356,7 +406,7 @@ function Dashboard() {
                 </div>
                 {catalog.datePrecision !== 'month' && (
                   <CalendarWidget
-                    key={`${year ?? 'all'}-${filter}-${selectedPrefecture ?? 'all'}`}
+                    key={`${year ?? 'all'}-${filter}-${selectedPrefecture ?? selectedCountry ?? 'all'}`}
                     yearFilter={year}
                     selectedActivity={selectedActivity}
                     activities={filtered}

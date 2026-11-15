@@ -22,7 +22,7 @@ test('one dashboard year selector controls activity data and widgets', () => {
   assert.match(dashboard, /<ContributionHeatmap[\s\S]*?activities=\{baseFiltered\}[\s\S]*?year=\{year\}/);
   assert.match(dashboard, /<ActivityLog[\s\S]*?activities=\{filtered\}/);
   assert.match(dashboard, /<CalendarWidget[\s\S]*?activities=\{filtered\}/);
-  assert.match(dashboard, /<RouteMap[\s\S]*?allActivities=\{baseFiltered\}/);
+  assert.match(dashboard, /<RouteMap[\s\S]*?allActivities=\{filtered\}/);
 });
 
 test('individual widgets no longer own year or sport selection', () => {
