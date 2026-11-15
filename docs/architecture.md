@@ -25,7 +25,8 @@ src/themes/dashboard/index.tsx
       ├── Home: StatsCards / ProfileCard / ContributionHeatmap / ActivityLog
       │          JapanMap / WorldMap / RouteMap / CalendarWidget
       ├── TracksPage
-      └── SummaryPage
+      ├── SummaryPage
+      └── ComparePage (published users only)
 ```
 
 - `src/static/activities.json`は未公開時の架空デモ用です。承認済み`preview.json`を読み込める場合はそちらを優先します。
@@ -48,6 +49,8 @@ src/themes/dashboard/index.tsx
 | `src/components/ContributionHeatmap.tsx` | ヒートマップUI、日付選択・画像書き出し |
 | `src/utils/summary.ts` | 集計のLife／年／月の分類・グラフ用の距離バケット |
 | `src/components/SummaryPage.tsx` | Life／年／月の期間選択と種目別統計・距離チャート |
+| `src/core/userComparison.ts` | 公開カタログから選択ユーザー別に実績を独立して集計。年・月・種目と訪問都道府県を同じ条件で計算し、年月のみ公開時は日別推移を作らない |
+| `src/components/ComparePage.tsx` | 2人以上のユーザーを選択し、活動回数・距離・活動時間・都道府県数と距離推移を比較する画面 |
 | `src/core/prefectureRoutes.ts`、`src/core/countryRoutes.ts` | GPSと日本の都道府県／世界の国・地域境界の照合 |
 | `src/components/RouteMapCanvas.tsx` | Leaflet地図と選択経路の描画、OpenStreetMapタイルの表示 |
 | `src/core/trackGeometry.ts` | ルート一覧のEncoded Polyline→サムネイル形状生成 |
@@ -60,6 +63,8 @@ src/themes/dashboard/index.tsx
 - `CalendarWidget`は表示ユーザーの全活動を受け取って最古月を決定します。月の前後移動によって年を越えた場合、Dashboardが上部の年フィルターを更新し、移動先の月を保持します。「すべての年」は年境界でも維持します。
 - 日付選択時、カレンダーとヒートマップは同日の開始時刻が最も早い活動を選択し、地図へ渡します。別の活動も日別一覧から選択できます。
 - 日付の`date_precision=month`時には実在する日付がないため、日別のカレンダーとヒートマップは表示しません。
+- 比較ページは年候補を**全公開ユーザー**の活動から生成し、Lifeは全期間に揃えます。特定年を選ぶと年比較となり、月比較はその年と選択月に限定します。選択されたユーザーごとに`user_id`で絞った活動から集計し、ユーザー間の活動・経路を混ぜません。年月のみ公開の場合も月次までを表示し、架空の日別推移は描きません。
+- 比較画面に認証やユーザー検索APIはありません。読み込まれた公開manifestの`users`からのみ選択でき、非公開データを要求しません。公開サイト全体は認証不要なので、アクセス制限を導入するまでは実GPSに公開許可が必要です。
 
 ## 公開JSONの取り扱い
 
@@ -85,6 +90,7 @@ PATH_PREFIX=/kudos pnpm build
 - `scripts/tests/calendar-month-range.test.cjs`、`calendar-cross-year.test.cjs`、`calendar-layout.test.cjs`：最古月・今月の制限、年またぎと活動選択。
 - `scripts/tests/heatmap-multi-session.test.cjs`、`frontend-behavior.test.cjs`：ヒートマップのクリック、ユーザー選択、GPS・公開JSON互換。
 - `scripts/tests/summary-period-selector.test.cjs`、`date-precision.test.cjs`、`sport-metrics.test.cjs`：集計選択、公開日付精度、種目別指標。
+- `scripts/tests/user-comparison.test.cjs`：複数ユーザーの独立集計、種目／年月の一致、閏日、記録なし、年月のみ公開、画面接続。
 - ブラウザでの地図操作やスマートフォン表示は[手動回帰チェック](frontend-regression.md)も実施してください。
 
 ## 変更時の安全境界
