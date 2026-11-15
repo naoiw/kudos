@@ -104,7 +104,10 @@ export function buildYearGrid(
     const weekIdx = Math.floor((d + startDay) / 7);
     while (grid.length <= weekIdx) grid.push([]);
     const key = `${yr}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const dayActs = dayActivitiesMap.get(key) || [];
+    // Match CalendarWidget: select and display the day's earliest activity first.
+    const dayActs = [...(dayActivitiesMap.get(key) || [])].sort((a, b) =>
+      a.start_date_local.localeCompare(b.start_date_local)
+    );
     const dist = dayMap.get(key) || 0;
     const domType = dominantDisplayType(dayActs);
     const typeValue =

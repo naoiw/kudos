@@ -361,7 +361,8 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                         title={titleText}
                         onClick={() => {
                           setDayActivities(day.activities);
-                          if (day.activities.length === 1)
+                          // Selecting a populated day always updates the route map.
+                          if (day.activities.length > 0)
                             onSelectActivity?.(day.activities[0]);
                         }}
                       />
