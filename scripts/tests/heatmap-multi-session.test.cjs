@@ -28,9 +28,11 @@ function transpile(file, dependencies) {
 const parseMovingTime = value =>
   value.split(':').reduce((seconds, part) => seconds * 60 + Number(part), 0);
 
+const activityDays = transpile('src/core/activityDays.ts', {});
 const grid = transpile('src/core/heatmapGrid.ts', {
   './heatmapWeek': { mondayFirstWeekdayIndex: day => (day + 6) % 7 },
   './hooks/useActivities': { parseMovingTime },
+  './activityDays': activityDays,
 });
 function activity(id, startDate) {
   return {
