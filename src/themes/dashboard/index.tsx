@@ -83,7 +83,9 @@ function Dashboard() {
   const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [footprintMode, setFootprintMode] = useState<'japan' | 'world'>('japan');
-  const [year, setYear] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(
+    () => getAvailableYears(activities)[0] ?? null
+  );
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
   );
@@ -119,11 +121,15 @@ function Dashboard() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
   const chooseUser = (userId: string) => {
+    const userActivities = catalog.activities.filter((activity) =>
+      activity.user_id === userId
+    );
     setSelectedUserId(userId);
+    setFilter('all');
     setSelectedActivity(null);
     setSelectedPrefecture(null);
     setSelectedCountry(null);
-    setYear(null);
+    setYear(getAvailableYears(userActivities)[0] ?? null);
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('u', userId);
     window.history.replaceState(null, '', nextUrl);
