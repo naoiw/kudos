@@ -5,7 +5,7 @@ export const messages: Record<Locale, Record<string, string>> = {
   ja: {
     totalDistance: '総距離', yearlyGoal: '年間目標', monthlyGoal: '月間目標',
     streak: '連続記録', activities: '回のアクティビティ', runs: '回のウォーキング',
-    years: '年', countries: 'か国', provinces: '都道府県', longest: '最長',
+    years: '年', countries: 'か国・地域', provinces: '都道府県', longest: '最長',
     days: '日', weeks: '週', vsLastYear: '前年同期比', vsLastMonth: '前月同期比',
     all: 'すべて', run: 'ウォーキング', heatmapTitle: 'アクティビティ・ヒートマップ',
     less: '少ない', more: '多い', activityLog: 'アクティビティ履歴',
@@ -18,7 +18,7 @@ export const messages: Record<Locale, Record<string, string>> = {
   en: {
     totalDistance: 'Total Distance', yearlyGoal: 'Yearly Goal',
     monthlyGoal: 'Monthly Goal', streak: 'Streak', activities: 'activities',
-    runs: 'walks', years: 'years', countries: 'countries', provinces: 'regions',
+    runs: 'walks', years: 'years', countries: 'countries / territories', provinces: 'regions',
     longest: 'Longest', days: 'days', weeks: 'weeks',
     vsLastYear: 'vs last year', vsLastMonth: 'vs last month', all: 'All',
     run: 'Walking', heatmapTitle: 'Activity Heatmap', less: 'Less', more: 'More',
