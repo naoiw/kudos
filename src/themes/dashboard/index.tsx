@@ -93,6 +93,8 @@ function Dashboard() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
   );
+  // Keep the exact target month when calendar arrows cross a year boundary.
+  const [calendarNavigationMonth, setCalendarNavigationMonth] = useState<Date | null>(null);
   const [page, setPage] = useState<Page>(pageFromPath);
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('life');
   const [editingGoals, setEditingGoals] = useState(false);
@@ -140,6 +142,7 @@ function Dashboard() {
       activity.user_id === userId
     );
     setSelectedUserId(userId);
+    setCalendarNavigationMonth(null);
     setFilter('all');
     setSelectedActivity(null);
     setSelectedPrefecture(null);
@@ -247,6 +250,7 @@ function Dashboard() {
           <button key={value} type="button" aria-pressed={filter === value}
             onClick={() => {
               setFilter(value);
+              setCalendarNavigationMonth(null);
               setSelectedActivity(null);
               setSelectedPrefecture(null);
               setSelectedCountry(null);
@@ -283,6 +287,7 @@ function Dashboard() {
                   setSummaryPeriod('year');
                 }
                 setYear(value);
+                setCalendarNavigationMonth(null);
                 setSelectedActivity(null);
                 setSelectedPrefecture(null);
                 setSelectedCountry(null);
@@ -449,6 +454,14 @@ function Dashboard() {
                   <CalendarWidget
                     key={`${currentUser.user_id}-${year ?? 'all'}-${filter}-${selectedPrefecture ?? selectedCountry ?? 'all'}`}
                     yearFilter={year}
+                    navigationMonth={calendarNavigationMonth}
+                    onNavigateMonth={(nextMonth) => {
+                      setCalendarNavigationMonth(nextMonth);
+                      if (year !== null && nextMonth.getFullYear() !== year) {
+                        setYear(nextMonth.getFullYear());
+                        setSelectedActivity(null);
+                      }
+                    }}
                     selectedActivity={selectedActivity}
                     activities={filtered}
                     allActivities={activities}
