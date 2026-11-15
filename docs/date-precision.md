@@ -1,33 +1,53 @@
-# 公開日時の精度と日別統計（Issue #17）
+# 公開日時の精度と日別表示
 
-## 二つの公開モード
+Kudosは管理者が承認した活動・GPS情報を公開JSONへ書き出します。日付の公開精度はGoogle Sheetsの`Settings.public_preview_date_precision`で指定します。**この設定だけで公開済みJSONが自動更新されることはありません。**
 
-| `public_preview_date_precision` | 公開形式 | 表示可能な統計 |
+## 公開形式
+
+| 設定 | 公開する`start_date`・`start_date_local` | UIへの影響 |
 | --- | --- | --- |
-| `month`（デフォルト） | `YYYY-MM`（年月のみ） | 年/月別件数・距離・活動時間、種目別統計、経路など |
-| `exact` | ユーザーの設定タイムゾーンによる `YYYY-MM-DDTHH:mm:ss` | 月別に加え、日別カレンダー、ヒートマップ、週別目標、連続記録、曜日・時間帯など |
+| `month`（GAS初期設定） | `YYYY-MM`（年月のみ） | Life／年／月の集計と種目別統計、経路、足跡マップを表示。日別ヒートマップ・カレンダーは非表示。月ごとの日別グラフも非表示 |
+| `exact` | ユーザーの設定タイムゾーンによる`YYYY-MM-DDTHH:mm:ss` | 上記に加え、日別カレンダー、ヒートマップ、開始時刻、日付を使う指標などを表示 |
 
-`month`では架空の「1日・8日・15日・22日」などを作成せず、`start_date` / `start_date_local` を`YYYY-MM`として公開します。画面からは日・週レベルのコンポーネントと集計単位を除外します。既に公開された旧JSONの`date_precision=month`についても、読み込み時に見かけ上の日時を`YYYY-MM`へ正規化します。
+**現在のリポジトリの`public/data/preview.json`は`schema_version=2`、`date_precision=exact`です。** GASの初期値が`month`であることと混同しないでください。現行の公開日時を変更するには、管理者が設定と承認状況を確認し、手動で再Publishする必要があります。
 
-`exact`ではGASの`kudosPreviewLocalDate_`がユーザー設定のタイムゾーンで原日時を変換し、そのまま公開します。UTC日付と日本時間で年・月・日が異なる例もテストに含めています。
+集計ページの期間ボタンは両モードとも**Life → 年 → 月**の3つだけです。以前の週・日ボタンは実装されていません。`month`で月を選択した場合は、実際の日付が無いため日別の棒グラフを出しません。
 
-## 公開・プライバシー
+## 年月のみの取り扱い
 
-**正確な活動日時の公開は、公開対象となるすべてのユーザーから同意が得られた場合のみ選択してください。** GPS経路との組み合わせで生活パターンが推定される可能性があります。
+- `month`では架空の「1日」「8日」「15日」「22日」や時刻を生成**しません**。年月そのものを公開します。
+- 旧形式のJSONに年月公開のための見かけ上の日付が含まれていても、Webアプリが`YYYY-MM`へ正規化します。
+- `src/core/activityDays.ts`のローカル日付グルーピングでは`YYYY-MM`を日付のある活動として扱いません。
+- `exact`ではApps Scriptの`kudosPreviewLocalDate_()`が利用者の設定タイムゾーンへ日時を変換します。ブラウザのタイムゾーンに依存して年・月・日が変わらないよう、主要なフィルターは公開文字列の年月日を利用します。
+- 月別の距離・活動数は集計できますが、年月だけのデータから連続活動日数や曜日・時刻の実績を推測しません。
 
-- `Settings.public_preview_export_approval=I_APPROVE_PUBLIC_STATS` は従来どおり必要です。
-- `Settings.public_preview_date_precision=exact` を選ぶ場合、**さらに** `Settings.public_preview_exact_dates_approval=I_APPROVE_EXACT_DATES` が必要です。
-- `exact`設定をコードの変更だけで自動的に有効にはしません。リポジトリを公開済みのため、一度公開した正確な日時はGit履歴に残り得ます。
-- 任意の公開モードでも、実GPS経路・活動名・表示名を公開している場合、年月匿名化だけで個人を完全に保護できません。
+## 公開の安全条件
 
-## 移行と確認
+**正確な日時を公開する前に、公開対象ユーザー全員の同意を確認してください。** GPS経路、活動名、日時、表示名を組み合わせると生活パターンが推定される可能性があります。
 
-1. `main`の変更を取得し、`pnpm install --frozen-lockfile`、`node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs`、`pnpm build` を実行。
-2. `node scripts/verify-gas-sync.cjs` の成功後、管理者が手動で`clasp push`。トリガーは変更されません。
-3. `showPublicPreviewProgress()`で進行中バッチがないことを確認。進行中の場合、**無断でresetしない**。
-4. 公開対象の同意に基づき`month`のまま運用するか、明示的に`exact`と二重承認を設定する。
-5. `inspectApprovedPublicPreview()`で件数・精度を確認し、必要なときだけ`publishApprovedPublicPreview()`を手動で最終完了まで実行。
-6. `public/data/preview.json`の`date_precision`と日付フォーマットを確認。月単位では日付・時刻を含まないこと、正確日時の場合は原日時に一致することを確認。
-7. Webでユーザー・種目・年を切り替え、月別集計と個別活動表示を確認。`exact`なら日別機能も確認。
+| 設定 | 内容 |
+| --- | --- |
+| `public_preview_export_approval` | `I_APPROVE_PUBLIC_STATS`が無いとエクスポート不可 |
+| `public_preview_user_ids` | 公開対象の管理用ユーザーIDをカンマ区切りで指定 |
+| `public_preview_date_precision` | `month`または`exact` |
+| `public_preview_exact_dates_approval` | `exact`を利用する場合だけ`I_APPROVE_EXACT_DATES`も必須 |
 
-**このIssueのコードマージ自体では実データの公開設定は変えません。** 現行公開JSONは `month` なので、ユーザーにテストしてもらう時点での公開日時は年月のみになります。
+`month`もGPSの地理的位置を隠しません。既に公開したデータはGit履歴や第三者の保存先に残り得るため、設定変更後の再Publishだけで完全に非公開にはなりません。
+
+## 管理者の確認手順
+
+1. 変更が`gas/`のコードに必要な場合のみ、[claspソース同期手順](gas-clasp-sync.md)に従って検証後に手動同期します。**フロントエンドだけの修正なら同期不要**です。
+2. `showPublicPreviewProgress()`で公開途中のバッチがないか確認します。途中の場合、意図を確認せずに`resetPublicPreviewBatch()`を呼び出さないでください。
+3. 公開対象と同意を確認し、`Settings`で公開許可と希望する日付精度を指定します。
+4. `inspectApprovedPublicPreview()`でユーザー数・活動数・`date_precision`を事前確認します。
+5. 必要なときだけ`publishApprovedPublicPreview()`を手動で繰り返し実行します。各回の進捗は`showPublicPreviewProgress()`で確認し、完了時の`published: true`を待ちます。
+6. 最終的な`public/data/preview.json`と経路チャンクが同時に更新され、Pagesへのデプロイが完了したら、公開日時・表示名・GPSが承認範囲内であることを確認します。
+7. Webの表示ユーザー・種目・年を切り替え、`month`なら日別UIが無いこと、`exact`ならカレンダー・ヒートマップ・開始時刻が正しいことを確認します。
+
+詳細は[GASの取り込み・公開運用](../gas/README.md)と[フロントエンド回帰確認](frontend-regression.md)を参照してください。
+
+```bash
+pnpm install --frozen-lockfile
+node --test gas/tests/*.test.cjs scripts/tests/*.test.cjs
+PATH_PREFIX=/kudos pnpm build
+```
