@@ -130,14 +130,12 @@ const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
 
 function OpenStreetMapAttribution({ className }: { className: string }) {
   return (
-    <a
-      className={`route-map-attribution ${className}`}
-      href={OSM_COPYRIGHT_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      © OpenStreetMap contributors
-    </a>
+    <span className={`route-map-attribution ${className}`}>
+      Map data from{' '}
+      <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener noreferrer">
+        OpenStreetMap
+      </a>
+    </span>
   );
 }
 
@@ -480,13 +478,13 @@ export function RouteMapCanvas({
         </p>
       )}
       <div className="route-map-footer">
-        <span role="status" aria-live="polite">
-          {status === 'error'
-            ? ja ? '地図ライブラリを読み込めませんでした' : 'Failed to load map library'
-            : status === 'loading'
-              ? ja ? '背景地図を読み込み中…' : 'Loading background map…'
-              : ja ? '背景地図 · OpenStreetMap' : 'Basemap · OpenStreetMap'}
-        </span>
+        {status !== 'ready' && (
+          <span role="status" aria-live="polite">
+            {status === 'error'
+              ? ja ? '地図ライブラリを読み込めませんでした' : 'Failed to load map library'
+              : ja ? '背景地図を読み込み中…' : 'Loading background map…'}
+          </span>
+        )}
         {status === 'error' && (
           <button className="route-map-action" onClick={() => {
             setMapReady(false);

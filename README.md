@@ -126,7 +126,7 @@ GitHub Pages → Kudos (users / activities / GPS)
 
 ## 地図データ・出典
 
-- **経路マップ：** [Leaflet 1.9.4](https://leafletjs.com/)（BSD 2-Clause）を`index.html`のバージョン固定CDNから読み込み、[OpenStreetMap](https://www.openstreetmap.org/copyright)の標準タイルを表示します。通常表示では地図下部のフッター、全画面表示では地図右下にリンク付きの「© OpenStreetMap contributors」を表示し、[OSMタイル利用ポリシー](https://operations.osmfoundation.org/policies/tiles/)に従います。ライト／ダーク両モードで背景タイルをグレースケール化します。
+- **経路マップ：** [Leaflet 1.9.4](https://leafletjs.com/)（BSD 2-Clause）を`index.html`のバージョン固定CDNから読み込み、[OpenStreetMap](https://www.openstreetmap.org/copyright)の標準タイルを表示します。通常表示では地図下部のフッター、全画面表示では地図右下に「Map data from OpenStreetMap」を表示し、OpenStreetMapの文字だけを[ライセンス情報](https://www.openstreetmap.org/copyright)へリンクして、[OSMタイル利用ポリシー](https://operations.osmfoundation.org/policies/tiles/)に従います。ライト／ダーク両モードで背景タイルをグレースケール化します。
 - **日本の足跡マップ：** [hfu/gmjpn21pref](https://github.com/hfu/gmjpn21pref)の都道府県GeoJSONを利用したSVG。ドラッグ、ホイール／ピンチズーム、選択地域へのフォーカスに対応します。訪問実績は`prefecturesForActivity()`が公開GPS経路と必要に応じて地域メタデータから判定します。
 - **世界の足跡マップ：** Natural Earth 1:110m国境データと1:50m小地域の補助点（Public Domain）を`src/assets/world-countries.json`に収録。`countriesForActivity()`がGPS経路から国・地域を推定し、`location_country`を補助情報として参照します。国境や小島などは概略判定のため誤差があります。
 - 原プロジェクトは[yihong0618/running_page](https://github.com/yihong0618/running_page)（MIT）です。著作権表示や改変したコードの条件は[LICENSE](LICENSE)を参照してください。

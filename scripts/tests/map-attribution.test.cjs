@@ -13,7 +13,10 @@ test('Leaflet attribution control is disabled, not the OpenStreetMap data credit
   assert.match(map, /href=\{OSM_COPYRIGHT_URL\}/);
   assert.match(map, /target="_blank"/);
   assert.match(map, /rel="noopener noreferrer"/);
-  assert.match(map, /© OpenStreetMap contributors/);
+  assert.match(map, /Map data from\{' '\}/);
+  assert.match(map, /<a href=\{OSM_COPYRIGHT_URL\}[^>]*>\s*OpenStreetMap\s*<\/a>/);
+  assert.doesNotMatch(map, /背景地図 · OpenStreetMap|Basemap · OpenStreetMap/);
+  assert.match(map, /status !== 'ready'/);
 });
 
 test('OSM credit is adjacent to the map normally and inside the map in fullscreen', () => {
@@ -23,5 +26,6 @@ test('OSM credit is adjacent to the map normally and inside the map in fullscree
   assert.match(css, /\.route-map:fullscreen \.route-map-attribution-fullscreen\s*\{\s*display:\s*block/);
   assert.match(css, /\.route-map:fullscreen \.route-map-attribution-footer\s*\{\s*display:\s*none/);
   assert.match(css, /\.route-map:fullscreen \.route-map-attribution-fullscreen\s*\{[^}]*position:\s*absolute/);
+  assert.match(css, /\.route-map-attribution a\s*\{/);
   assert.doesNotMatch(css, /\.route-map \.leaflet-control-attribution\s*\{/);
 });
