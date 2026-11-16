@@ -147,6 +147,6 @@ test('the heatmap still uses local-year data and unchanged selection routing', (
   const dashboard = fs.readFileSync('src/themes/dashboard/index.tsx', 'utf8');
   const heatmap = fs.readFileSync('src/components/ContributionHeatmap.tsx', 'utf8');
   assert.match(dashboard, /<ContributionHeatmap[\s\S]*?onSelectActivity=\{selectActivity\}/);
-  assert.match(heatmap, /isFutureHeatmapDay\(day\.date\)/);
+  assert.match(heatmap, /isFutureHeatmapDay\(day\.date, today\)/);
   assert.match(heatmap, /disabled=\{isFuture \|\| !day\.activities\.length\}/);
 });
