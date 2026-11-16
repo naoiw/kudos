@@ -1,6 +1,21 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>Kudos</title><script>
-// Restore the requested client-side route after GitHub Pages falls back to 404.
-sessionStorage.setItem('redirect', location.pathname + location.search + location.hash);
-location.replace('/kudos/');
-</script></head><body></body></html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Kudos</title>
+<script>
+  // GitHub Pages uses a single root 404 for both /kudos/ and /kudos/develop/.
+  // Save the requested SPA route, then reload the correct app's index.html.
+  var preview = location.pathname === '/kudos/develop' ||
+    location.pathname.startsWith('/kudos/develop/');
+  var basePath = preview ? '/kudos/develop/' : '/kudos/';
+  try {
+    sessionStorage.setItem('redirect', location.pathname + location.search + location.hash);
+  } catch (error) {
+    // Private browsing can disable sessionStorage; still load the right app.
+  }
+  location.replace(basePath);
+</script>
+</head>
+<body></body>
+</html>

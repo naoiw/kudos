@@ -51,9 +51,19 @@ PATH_PREFIX=/kudos pnpm build
 10. **`date_precision=month`：** 日別カレンダーとヒートマップが表示されず、集計はLife／年／月のみで月別の日別グラフを表示しないこと。架空の日付・時刻が現れないこと。
 11. **公開データ異常系：** `preview.json`がない／未承認の場合は架空デモを表示すること。公開v2 manifestのチャンクが欠落・不正な場合は黙ってデモ経路に置き換えないこと。実際の公開データをテストのために壊してはいけません。
 
+## オンラインプレビューの検証
+
+`develop`のCI成功後、以下をスマートフォンとPCで確認します。
+
+- 本番 `https://naoiw.github.io/kudos/` は本番のコード、プレビュー `https://naoiw.github.io/kudos/develop/` は`develop`のコードを表示すること。本番に未マージ機能が現れないこと。
+- プレビューで`/tracks`・`/summary`へ移動し、直接URLを開き直しても`/kudos/`の本番画面へ戻らないこと。
+- 本番・プレビューともに同じ`main`承認済み`public/data/preview.json`と`route_chunks`を読み、経路や統計が正常表示されること。未承認GPSやシート情報を含まないこと。
+- `develop`へのpushで`Validate Kudos`が成功した場合のみデプロイWorkflowが動き、GitHub Pagesの`build`／`deploy`が成功すること。
+- ヒートマップの今年の未来日が薄くなり選択不可になる修正は`develop`で確認し、承認するまでは`main`へ出さないこと。
+
 ## 公開・運用の検証
 
-- フロントエンド変更のPRは上記CI成功後に`main`へマージし、[Pagesデプロイ](../.github/workflows/deploy.yml)の`build`／`deploy`両ジョブが成功していることを確認します。
+- 本番へ出す個別機能PRはCI成功後に`main`へマージし、[Pagesデプロイ](../.github/workflows/deploy.yml)の`build`／`deploy`両ジョブが成功していることを確認します。`develop`へのpushもCI成功後に同じPages成果物のプレビューへ反映されます。
 - GASの変更がないなら`clasp push`とGPSの再Publishは不要です。GASソース同期を行う場合は、[同期手順](gas-clasp-sync.md)と[Publish手順](../gas/README.md)をそれぞれ参照してください。
 - 公開プレビューの現行設定は`exact`ですが、デフォルト設定の`month`も必ずテストに残してください。公開日時とGPS経路の取り扱いは[プライバシー手順](date-precision.md)を参照してください。
 
