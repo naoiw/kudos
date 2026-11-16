@@ -30,7 +30,7 @@ src/themes/dashboard/index.tsx
 
 - `src/static/activities.json`は未公開時の架空デモ用です。承認済み`preview.json`を読み込める場合はそちらを優先します。
 - v2のGPSチャンクは並列取得数に上限を設け、パス・形式・重複ID・取得失敗を検証します。壊れた公開v2データを架空の経路に置換することはしません。
-- GitHub Pagesは`main`のpushにより更新されますが、GASのソース同期・データPublishとは独立しています。
+- GitHub Pagesは`main`のpush、または`develop`のCI成功で本番・プレビューをまとめて再デプロイします。GASのソース同期・データPublishとは独立しています。
 
 ## 表示・状態の責務
 
@@ -69,6 +69,14 @@ src/themes/dashboard/index.tsx
 - `date_precision=month`は`YYYY-MM`のみ。`exact`は活動ユーザーの設定タイムゾーンに基づく現地日時。公開サイトは現在`exact`データを保持しています。切替にはGAS承認と手動Publishが必要です。
 - GPSはEncoded Polylineとして公開します。`location_country`が`null`でも足跡判定が可能ですが、簡略化された国境や小島では誤差が生じ得ます。
 - `average_heartrate`は旧JSONとの互換フィールドとして残しますが、画面では使用しません。
+
+## GitHub Pages本番／プレビュー構成
+
+- `.github/workflows/check.yml`は`develop`のpushと`main`／`develop`宛のPRを検査します。`develop`が成功した時、デフォルトブランチ上の信頼されたデプロイWorkflowが`workflow_run`で起動します。
+- `.github/workflows/deploy.yml`は両ブランチを別々にcheckoutし、Viteの`PATH_PREFIX`を本番`/kudos`・プレビュー`/kudos/develop`としてビルドします。`site/index.html`と`site/develop/index.html`を**同一Pages成果物**に格納するため、片方のデプロイがもう片方を消すことはありません。
+- プレビューの`public/data/`は`main`の公開承認済みデータで上書きしてからビルドします。`develop`の未承認GPSファイルやPublish変更は本番／プレビューのデプロイに反映しません。ただし**developブランチ自体も公開GitHubリポジトリ上に存在する**ため、秘密のファイルをコミットしてはいけません。
+- `public/404.html`はアクセスURLが`/kudos/develop/`で始まるとプレビューのindexへ戻し、sessionStorageの経路を復元します。
+- `develop`に未公開機能が含まれる場合、`develop`ブランチ全体を`main`へマージする運用を禁止します。個別の承認済みPRだけを取り込みます。
 
 ## 開発と検証
 

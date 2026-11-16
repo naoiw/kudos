@@ -4,6 +4,21 @@
 
 **公開サイト：** https://naoiw.github.io/kudos/
 
+**オンラインプレビュー（develop）：** https://naoiw.github.io/kudos/develop/
+
+### ブランチとオンラインプレビュー
+
+| ブランチ | URL | 用途 |
+| --- | --- | --- |
+| `main` | https://naoiw.github.io/kudos/ | 本番公開。承認済み変更のみ |
+| `develop` | https://naoiw.github.io/kudos/develop/ | ブラウザから変更を確認するためのプレビュー |
+
+- `develop`にpushするとCI（`Validate Kudos`）が実行され、成功後に**本番とプレビューを一つのGitHub Pagesとして再デプロイ**します。手動でGitHub Actionsの`Deploy Kudos to GitHub Pages`を実行することもできます。
+- 各画面（例：`/kudos/develop/tracks`、`/kudos/develop/summary`）はプレビュー内を遷移します。直接アクセス・再読み込みは共通の404リダイレクトで復帰します。
+- **プレビューも認証のない公開ページ**です。`develop`の画面は**`main`で公開承認済みの`public/data/`のみ**を参照し、未承認データや非公開のGPSを使いません。ユーザー比較PR #54など、公開方針が決まっていない機能は`develop`に取り込まないでください。
+- `develop`の機能は自動的に`main`へマージされません。必要な機能だけを個別PRで`main`に反映し、`develop`を丸ごと本番にマージしないでください。
+
+
 > **公開データについて：** サイトは認証なしで閲覧できます。現在の`public/data/preview.json`には、承認された表示名・活動日時・統計・GPS経路が含まれます。公開経路は誰でも取得できます。`src/static/activities.json`の架空デモデータとは別物です。
 
 ## 主な機能
@@ -70,9 +85,9 @@ Windows PowerShellで環境変数を指定する場合は、`$env:PATH_PREFIX='/
 
 ## 公開とブランチ運用
 
-- 主ブランチは`main`です。作業は一時的な機能ブランチ→PR→CI→`main`へのマージで進めます。
+- 本番ブランチは`main`、オンライン検証用ブランチは`develop`です。機能ブランチ→検証用`develop`→個別機能PRで`main`への反映を基本とし、未承認機能を本番へまとめてマージしません。
 - PRでは[`Validate Kudos`](.github/workflows/check.yml)がLinuxのViteビルド、GASソース安全検査、Nodeテスト、実際のclasp送信対象検査と、Windowsの種目ルール／CRLF検査を行います。
-- `main`へのpushで[`Deploy Kudos to GitHub Pages`](.github/workflows/deploy.yml)が`PATH_PREFIX=/kudos`を指定してビルドし、自動公開します。リポジトリのPages Sourceは**GitHub Actions**を選びます。
+- `main`へのpush、または`develop`のCI成功後に[`Deploy Kudos to GitHub Pages`](.github/workflows/deploy.yml)が`main`を`/kudos/`、`develop`を`/kudos/develop/`へビルドし、単一のPages成果物として公開します。リポジトリのPages Sourceは**GitHub Actions**を選びます。
 - **Pagesのデプロイ、GASコード同期、活動データのPublishは別操作です。** フロントエンドだけの変更ではGAS同期もGPSデータの再Publishも不要です。
 
 ## データ構成と更新
