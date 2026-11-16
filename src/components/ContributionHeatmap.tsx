@@ -2,7 +2,7 @@ import { memo, useMemo, useRef, useState } from 'react';
 import { exportCard } from '../utils/exportCard';
 import type { Activity, SportFilter } from '../types';
 import { SPORT_ORDER } from '../core/sports';
-import { buildYearGrid, toDisplayType } from '../core/heatmapGrid';
+import { buildYearGrid, isFutureHeatmapDay, toDisplayType } from '../core/heatmapGrid';
 import {
   getAvailableYears,
   formatDistance,
@@ -336,14 +336,18 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                       <div key={`pad-${i}`} className="h-3 w-3 shrink-0" />
                     ))}
                   {week.map((day) => {
+                    // Keep the full-year layout, but distinguish unelapsed dates
+                    // from past days without activities.
+                    const isFuture = isFutureHeatmapDay(day.date);
                     const bgColor =
                       day.distance === 0
                         ? 'var(--color-border)'
                         : isAll
                           ? getColorAll(day.typeRatio, day.domType)
                           : getColor(day.distance, max, filter);
-                    const titleText =
-                      day.activities.length === 0
+                    const titleText = isFuture
+                      ? `${day.date}: ${locale === 'ja' ? '未来の日付' : 'Future date'}`
+                      : day.activities.length === 0
                         ? day.date
                         : isGym
                           ? `${day.date}: ${day.distance} session(s)`
@@ -353,13 +357,17 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                     return (
                       <button
                         type="button"
-                        disabled={!day.activities.length}
+                        disabled={isFuture || !day.activities.length}
                         aria-label={titleText}
                         key={day.date}
-                        className="heatmap-day h-3 w-3 shrink-0 rounded-sm transition-colors hover:ring-1 hover:ring-[var(--color-muted)]"
-                        style={{ backgroundColor: bgColor }}
+                        className={`heatmap-day h-3 w-3 shrink-0 rounded-sm transition-colors ${isFuture ? 'cursor-default' : 'hover:ring-1 hover:ring-[var(--color-muted)]'}`}
+                        style={{
+                          backgroundColor: isFuture ? 'var(--color-border)' : bgColor,
+                          opacity: isFuture ? 0.25 : 1,
+                        }}
                         title={titleText}
                         onClick={() => {
+                          if (isFuture) return;
                           setDayActivities(day.activities);
                           // Selecting a populated day always updates the route map.
                           if (day.activities.length > 0)
