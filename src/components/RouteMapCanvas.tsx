@@ -5,6 +5,8 @@ import { hasRoute, routeForActivity } from '../core/routeFallback';
 import { sportColor } from '../core/sports';
 import { activityPointsInPrefecture, prefectureBounds } from '../core/prefectureRoutes';
 import { useLocale } from '../hooks/useLocale';
+import type { DensityResult } from '../core/routeDensity';
+import { RouteDensityOverlay, type DensityLeafletMap } from './RouteDensityOverlay';
 import './RouteMap.css';
 
 export interface RouteMapProps {
@@ -22,7 +24,7 @@ interface LeafletLayer {
   addTo(map: LeafletMap): LeafletLayer;
 }
 
-interface LeafletMap {
+interface LeafletMap extends DensityLeafletMap {
   setView(center: LatLng, zoom: number): LeafletMap;
   fitBounds(points: LatLng[], options: {
     padding: [number, number];
@@ -141,6 +143,50 @@ export function RouteMapCanvas({
   const [mapReady, setMapReady] = useState(false);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [retry, setRetry] = useState(0);
+  const [viewMode, setViewMode] = useState<'routes' | 'density'>('routes');
+  const [density, setDensity] = useState<DensityResult | null>(null);
+  const [densityStatus, setDensityStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [densityRetry, setDensityRetry] = useState(0);
+  // Individual activity selection temporarily shows its route. Overview restores density.
+  const showDensity = viewMode === 'density' && !selectedActivity;
+
+  useEffect(() => {
+    if (!showDensity) return;
+    setDensity(null);
+    setDensityStatus('loading');
+    let cancelled = false;
+    let worker: Worker | null = null;
+    try {
+      worker = new Worker(
+        new URL('../workers/routeDensity.worker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      worker.onmessage = ({ data }: MessageEvent<{
+        result?: DensityResult;
+        error?: string;
+      }>) => {
+        if (cancelled) return;
+        if (!data.result || data.error) {
+          setDensityStatus('error');
+          return;
+        }
+        setDensity(data.result);
+        setDensityStatus('ready');
+      };
+      worker.onerror = () => {
+        if (!cancelled) setDensityStatus('error');
+      };
+      worker.postMessage(activities.map(({ summary_polyline, route_segments }) => ({
+        summary_polyline, route_segments,
+      })));
+    } catch {
+      setDensityStatus('error');
+    }
+    return () => {
+      cancelled = true;
+      worker?.terminate();
+    };
+  }, [showDensity, activities, densityRetry]);
 
   const displayedActivity = useMemo(
     () =>
@@ -156,6 +202,7 @@ export function RouteMapCanvas({
       : null;
 
   const routes = useMemo(() => {
+    if (showDensity) return [];
     const list = selectedActivity
       ? displayedActivity
         ? [displayedActivity]
@@ -163,7 +210,7 @@ export function RouteMapCanvas({
       : activities;
 
     return list.flatMap(decodeRoute);
-  }, [activities, selectedActivity, displayedActivity]);
+  }, [activities, selectedActivity, displayedActivity, showDensity]);
 
   const fitRoutes = useCallback(() => {
     const map = mapRef.current;
@@ -188,13 +235,21 @@ export function RouteMapCanvas({
       }
     }
 
+    if (showDensity && density?.bounds) {
+      map.fitBounds(density.bounds, {
+        padding: [30, 30],
+        maxZoom: 13,
+        animate: false,
+      });
+      return;
+    }
     if (boundsRef.current.length === 0) return;
     map.fitBounds(boundsRef.current, {
       padding: [30, 30],
       maxZoom: selectedActivity ? 16 : 13,
       animate: false,
     });
-  }, [activities, focusedPrefecture, selectedActivity]);
+  }, [activities, focusedPrefecture, selectedActivity, showDensity, density]);
 
   useEffect(() => {
     let cancelled = false;
@@ -266,6 +321,11 @@ export function RouteMapCanvas({
     }
     boundsRef.current = points;
 
+    if (showDensity) {
+      if (density?.bounds || focusedPrefecture) fitRoutes();
+      else if (densityStatus === 'ready') map.setView(MAP_CENTER, 10);
+      return;
+    }
     if (points.length) {
       fitRoutes();
     } else if (focusedPrefecture) {
@@ -273,7 +333,7 @@ export function RouteMapCanvas({
     } else {
       map.setView(MAP_CENTER, 10);
     }
-  }, [routes, mapReady, selectedActivity, focusedPrefecture, fitRoutes]);
+  }, [routes, mapReady, selectedActivity, focusedPrefecture, fitRoutes, showDensity, density, densityStatus]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -309,16 +369,32 @@ export function RouteMapCanvas({
           <p className="truncate text-xs text-[var(--color-muted)]" title={selectedActivity?.name}>
             {selectedActivity
               ? `${selectedActivity.name} · ${(selectedActivity.distance / 1000).toFixed(1)} km`
-              : `${routes.length.toLocaleString()} ${ja ? '件の経路' : 'routes'}`}
+              : showDensity
+                ? `${(density?.activityCount ?? 0).toLocaleString()} ${ja ? '件の活動から密度を算出' : 'activities counted'}`
+                : `${routes.length.toLocaleString()} ${ja ? '件の経路' : 'routes'}`}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          {!selectedActivity && (
+            <div className="route-map-view-switch" role="group"
+              aria-label={ja ? '地図の表示方式' : 'Map view mode'}>
+              {(['routes', 'density'] as const).map(mode => (
+                <button key={mode} type="button" className="route-map-action"
+                  aria-pressed={viewMode === mode}
+                  onClick={() => setViewMode(mode)}>
+                  {mode === 'routes'
+                    ? (ja ? '通常' : 'Routes')
+                    : (ja ? '密度' : 'Density')}
+                </button>
+              ))}
+            </div>
+          )}
           {selectedActivity && onClearSelection && (
             <button className="route-map-action" onClick={onClearSelection}>
               {ja ? '一覧に戻る' : 'Overview'}
             </button>
           )}
-          <button className="route-map-action" disabled={!routes.length} onClick={fitRoutes}>
+          <button className="route-map-action" disabled={showDensity ? !density?.bounds : !routes.length} onClick={fitRoutes}>
             {ja ? '経路全体を表示' : 'Fit routes'}
           </button>
           <button className="route-map-action" onClick={toggleFullscreen}
@@ -336,14 +412,54 @@ export function RouteMapCanvas({
         </p>
       )}
 
+      {showDensity && (
+        <div className="route-density-legend" role="note">
+          <span>{ja ? '通過アクティビティ数' : 'Visits by activity'}</span>
+          <span><i className="route-density-swatch" style={{ background: '#2563eb' }} />
+            {ja ? '1回' : '1'}</span>
+          <span><i className="route-density-swatch" style={{ background: '#f59e0b' }} />
+            {ja ? '2〜3回' : '2–3'}</span>
+          <span><i className="route-density-swatch" style={{ background: '#ef4444' }} />
+            {ja ? '4回以上' : '4+'}</span>
+        </div>
+      )}
       <div className="route-map-body">
         <div ref={containerRef} className="h-full w-full" />
-        {!routes.length && (
+        {showDensity && (
+          <RouteDensityOverlay map={mapReady ? mapRef.current : null} density={density} />
+        )}
+        {showDensity && densityStatus === 'loading' && (
+          <div className="route-map-density-status" role="status">
+            {ja ? '経路密度を計算中…' : 'Calculating route density…'}
+          </div>
+        )}
+        {showDensity && densityStatus === 'error' && (
+          <div className="route-map-density-status" role="alert">
+            {ja ? '密度の計算に失敗しました。' : 'Could not calculate density.'}
+            <button className="route-map-action" type="button"
+              onClick={() => setDensityRetry(value => value + 1)}>
+              {ja ? '再試行' : 'Retry'}
+            </button>
+          </div>
+        )}
+        {showDensity && densityStatus === 'ready' && !density?.cells.length && (
+          <div className="route-map-empty" role="status">
+            {ja ? '密度表示に使用できるGPS経路がありません' : 'No GPS routes for density'}
+          </div>
+        )}
+        {!showDensity && !routes.length && (
           <div className="route-map-empty" role="status">
             {ja ? '表示可能なGPS経路がありません' : 'No GPS route available'}
           </div>
         )}
       </div>
+      {showDensity && (
+        <p className="route-density-privacy-note" role="note">
+          {ja
+            ? '公開GPSからの推定です。頻繁に通る場所から生活圏が分かる可能性があります。'
+            : 'Estimated from public GPS routes. Frequent locations may reveal personal patterns.'}
+        </p>
+      )}
       <div className="route-map-footer">
         <span role="status" aria-live="polite">
           {status === 'error'

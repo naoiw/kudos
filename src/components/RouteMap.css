@@ -96,3 +96,67 @@
   background: color-mix(in srgb, var(--color-card) 75%, transparent);
   font-size: 13px;
 }
+
+/* Non-interactive overlay: panning, zooming and route selection stay on Leaflet. */
+.route-map-density-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+  opacity: 0;
+}
+.route-map-view-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.route-map-view-switch .route-map-action {
+  border: none;
+}
+.route-map-view-switch [aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.route-density-legend {
+  display: flex;
+  gap: 8px 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0 16px 10px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.route-density-legend > span:not(:first-child) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.route-density-swatch {
+  display: inline-block;
+  height: 10px;
+  width: 16px;
+  border-radius: 2px;
+}
+.route-density-privacy-note {
+  padding: 8px 16px 0;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.route-map-density-status {
+  position: absolute;
+  inset: 0;
+  z-index: 450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+  color: var(--color-text);
+  font-size: 13px;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-card) 65%, transparent);
+}
+.route-map-density-status button { pointer-events: auto; }
