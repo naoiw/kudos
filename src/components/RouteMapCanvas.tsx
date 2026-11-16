@@ -44,6 +44,7 @@ interface LeafletApi {
   map(container: HTMLElement, options: {
     zoomControl: boolean;
     scrollWheelZoom: boolean;
+    attributionControl: boolean;
   }): LeafletMap;
   tileLayer(url: string, options: {
     attribution: string;
@@ -123,6 +124,19 @@ function decodeRoute(activity: Activity): DisplayRoute[] {
   }
   decodedRouteCache.set(activity, routes);
   return routes;
+}
+
+const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
+
+function OpenStreetMapAttribution({ className }: { className: string }) {
+  return (
+    <span className={`route-map-attribution ${className}`}>
+      Map data from{' '}
+      <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener noreferrer">
+        OpenStreetMap
+      </a>
+    </span>
+  );
 }
 
 export function RouteMapCanvas({
@@ -263,6 +277,8 @@ export function RouteMapCanvas({
         const map = L.map(containerRef.current, {
           zoomControl: true,
           scrollWheelZoom: true,
+          // The visible OSM credit is rendered beside the map and in fullscreen.
+          attributionControl: false,
         });
         instance = map;
         mapRef.current = map;
@@ -452,6 +468,7 @@ export function RouteMapCanvas({
             {ja ? '表示可能なGPS経路がありません' : 'No GPS route available'}
           </div>
         )}
+        <OpenStreetMapAttribution className="route-map-attribution-fullscreen" />
       </div>
       {showDensity && (
         <p className="route-density-privacy-note" role="note">
@@ -461,13 +478,13 @@ export function RouteMapCanvas({
         </p>
       )}
       <div className="route-map-footer">
-        <span role="status" aria-live="polite">
-          {status === 'error'
-            ? ja ? '地図ライブラリを読み込めませんでした' : 'Failed to load map library'
-            : status === 'loading'
-              ? ja ? '背景地図を読み込み中…' : 'Loading background map…'
-              : ja ? '背景地図 · OpenStreetMap' : 'Basemap · OpenStreetMap'}
-        </span>
+        {status !== 'ready' && (
+          <span role="status" aria-live="polite">
+            {status === 'error'
+              ? ja ? '地図ライブラリを読み込めませんでした' : 'Failed to load map library'
+              : ja ? '背景地図を読み込み中…' : 'Loading background map…'}
+          </span>
+        )}
         {status === 'error' && (
           <button className="route-map-action" onClick={() => {
             setMapReady(false);
@@ -476,6 +493,7 @@ export function RouteMapCanvas({
             {ja ? '再試行' : 'Retry'}
           </button>
         )}
+        <OpenStreetMapAttribution className="route-map-attribution-footer" />
       </div>
     </section>
   );
