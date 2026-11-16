@@ -44,6 +44,7 @@ interface LeafletApi {
   map(container: HTMLElement, options: {
     zoomControl: boolean;
     scrollWheelZoom: boolean;
+    attributionControl: boolean;
   }): LeafletMap;
   tileLayer(url: string, options: {
     attribution: string;
@@ -123,6 +124,21 @@ function decodeRoute(activity: Activity): DisplayRoute[] {
   }
   decodedRouteCache.set(activity, routes);
   return routes;
+}
+
+const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
+
+function OpenStreetMapAttribution({ className }: { className: string }) {
+  return (
+    <a
+      className={`route-map-attribution ${className}`}
+      href={OSM_COPYRIGHT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      © OpenStreetMap contributors
+    </a>
+  );
 }
 
 export function RouteMapCanvas({
@@ -263,6 +279,8 @@ export function RouteMapCanvas({
         const map = L.map(containerRef.current, {
           zoomControl: true,
           scrollWheelZoom: true,
+          // The visible OSM credit is rendered beside the map and in fullscreen.
+          attributionControl: false,
         });
         instance = map;
         mapRef.current = map;
@@ -452,6 +470,7 @@ export function RouteMapCanvas({
             {ja ? '表示可能なGPS経路がありません' : 'No GPS route available'}
           </div>
         )}
+        <OpenStreetMapAttribution className="route-map-attribution-fullscreen" />
       </div>
       {showDensity && (
         <p className="route-density-privacy-note" role="note">
@@ -476,6 +495,7 @@ export function RouteMapCanvas({
             {ja ? '再試行' : 'Retry'}
           </button>
         )}
+        <OpenStreetMapAttribution className="route-map-attribution-footer" />
       </div>
     </section>
   );
