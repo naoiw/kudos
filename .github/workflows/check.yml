@@ -1,7 +1,9 @@
 name: Validate Kudos
 on:
+  push:
+    branches: [develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 permissions:
   contents: read
