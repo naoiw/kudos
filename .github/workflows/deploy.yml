@@ -54,6 +54,13 @@ jobs:
           cache-dependency-path: stable/pnpm-lock.yaml
       - name: Install production dependencies
         run: pnpm --dir stable install --frozen-lockfile
+      - name: Reuse only main-approved public data in preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf preview/public/data
+          cp -a stable/public/data preview/public/data
+          cmp stable/public/data/preview.json preview/public/data/preview.json
       - name: Install preview dependencies
         run: pnpm --dir preview install --frozen-lockfile
       - name: Build production at /kudos/
