@@ -79,6 +79,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
   const [exportMessage, setExportMessage] = useState('');
   const [exportUrl, setExportUrl] = useState('');
   const [dayActivities, setDayActivities] = useState<Activity[]>([]);
+  const today = new Date();
 
   const isGym = false;
   const isAll = filter === 'all';
@@ -338,7 +339,7 @@ export const ContributionHeatmap = memo(function ContributionHeatmap({
                   {week.map((day) => {
                     // Keep the full-year layout, but distinguish unelapsed dates
                     // from past days without activities.
-                    const isFuture = isFutureHeatmapDay(day.date);
+                    const isFuture = isFutureHeatmapDay(day.date, today);
                     const bgColor =
                       day.distance === 0
                         ? 'var(--color-border)'
