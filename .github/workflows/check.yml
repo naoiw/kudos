@@ -1,13 +1,24 @@
 name: Validate Kudos
 on:
   push:
-    branches: [develop]
+    branches: [main, develop]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  shared-node-ci:
+    uses: naoiw/.github/.github/workflows/reusable-node-ci.yml@00047e65d7e53551e2644df02d2f22743ea2c471
+    with:
+      package-manager: pnpm
+      node-version: "26"
+      pnpm-version: "8.9.0"
+      run-lint: false # Existing ESLint setup is not part of the current CI
+      run-typecheck: false # No typecheck script
+      run-tests: false # Project-specific Node/GAS checks remain in the jobs below
+      run-build: true
+
   build:
     runs-on: ubuntu-latest
     steps:
