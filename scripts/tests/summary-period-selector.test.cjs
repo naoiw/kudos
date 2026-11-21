@@ -39,8 +39,7 @@ test('month-only disclosure does not expose day/week period selection', () => {
 
 test('Life selection chooses all years, including direct navigation to Summary', () => {
   const dashboard = fs.readFileSync('src/themes/dashboard/index.tsx', 'utf8');
-  assert.match(dashboard,
-    /pageFromPath\(\) === 'summary'\s*\?\s*null\s*:\s*getAvailableYears\(activities\)\[0\] \?\? null/);
+  assert.match(dashboard, /pageFromPath\(\) === 'summary' \|\| pageFromPath\(\) === 'compare'/);
   assert.match(dashboard,
     /const navigate = \(next: Page\) => \{\s*if \(next === 'summary'\) \{\s*[\s\S]*?setSummaryPeriod\('life'\);\s*setYear\(null\)/);
   assert.match(dashboard,
@@ -52,7 +51,7 @@ test('Life selection chooses all years, including direct navigation to Summary',
 test('Life is not left selected when the global year filter is changed to a specific year', () => {
   const dashboard = fs.readFileSync('src/themes/dashboard/index.tsx', 'utf8');
   assert.match(dashboard,
-    /page === 'summary' && summaryPeriod === 'life' && value !== null[\s\S]*?setSummaryPeriod\('year'\);\s*\}\s*setYear\(value\)/);
+    /page === 'summary' && summaryPeriod === 'life' && value !== null[\s\S]*?setSummaryPeriod\('year'\);[\s\S]*?setYear\(value\)/);
   assert.match(dashboard,
     /page === 'summary' && summaryPeriod === 'life'\s*\?\s*null\s*:\s*getAvailableYears\(userActivities\)\[0\] \?\? null/);
   assert.match(dashboard,

@@ -59,5 +59,5 @@ test('calendar stays in the globally selected year, including empty sport filter
   assert.match(calendar, /disabled=\{!isMonthWithinBounds\(new Date\(year, monthIndex \+ 1, 1\), bounds\)\}/);
   assert.match(calendar, /yearFilter === null \|\| yearFilter === today\.getFullYear\(\)/);
   assert.ok(dashboard.indexOf('One year selection controls') <
-    dashboard.indexOf('{editingGoals && ('));
+    dashboard.indexOf("{editingGoals && page !== 'compare' && ("));
 });

@@ -32,6 +32,7 @@ import { prefecturesForActivity } from '@/core/prefectureRoutes';
 import { countriesForActivity } from '@/core/countryRoutes';
 import { activityYear } from '@/core/datePrecision';
 import type { SummaryPeriod } from '@/utils/summary';
+import type { ComparisonPeriod } from '@/core/userComparison';
 import {
   defaultSportGoals,
   loadSportGoals,
@@ -50,18 +51,20 @@ const SummaryPage = lazy(() =>
     default: module.SummaryPage,
   }))
 );
+const ComparePage = lazy(() =>
+  import('@/components/ComparePage').then((module) => ({
+    default: module.ComparePage,
+  }))
+);
 
-type Page = 'home' | 'tracks' | 'summary';
-const pageFromPath = (): Page =>
-  window.location.pathname
+type Page = 'home' | 'tracks' | 'summary' | 'compare';
+const pageFromPath = (): Page => {
+  const route = window.location.pathname
     .slice(import.meta.env.BASE_URL.length)
-    .replace(/\/$/, '') === 'summary'
-    ? 'summary'
-    : window.location.pathname
-          .slice(import.meta.env.BASE_URL.length)
-          .replace(/\/$/, '') === 'tracks'
-      ? 'tracks'
-      : 'home';
+    .replace(/\/$/, '');
+  if (route === 'summary' || route === 'tracks' || route === 'compare') return route;
+  return 'home';
+};
 
 function Dashboard() {
   const routeSectionRef = useRef<HTMLDivElement>(null);
@@ -86,7 +89,8 @@ function Dashboard() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [footprintMode, setFootprintMode] = useState<'japan' | 'world'>('japan');
   const [year, setYear] = useState<number | null>(
-    () => pageFromPath() === 'summary'
+    // Both all-time views start without a year restriction.
+    () => pageFromPath() === 'summary' || pageFromPath() === 'compare'
       ? null
       : getAvailableYears(activities)[0] ?? null
   );
@@ -103,6 +107,7 @@ function Dashboard() {
 
   const [page, setPage] = useState<Page>(pageFromPath);
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('life');
+  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('life');
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalsByUser, setGoalsByUser] = useState<Record<string, SportGoals>>(
     () => Object.fromEntries(
@@ -136,6 +141,10 @@ function Dashboard() {
         setSummaryPeriod('life');
         setYear(null);
         clearSelection();
+      } else if (nextPage === 'compare') {
+        setComparisonPeriod('life');
+        setYear(null);
+        clearSelection();
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -165,6 +174,11 @@ function Dashboard() {
       setSummaryPeriod('life');
       setYear(null);
       clearSelection();
+    } else if (next === 'compare') {
+      setComparisonPeriod('life');
+      setYear(null);
+      setEditingGoals(false);
+      clearSelection();
     }
     window.history.pushState(
       null,
@@ -176,7 +190,10 @@ function Dashboard() {
   };
 
   const [currentYear] = useState(() => new Date().getFullYear());
-  const years = useMemo(() => getAvailableYears(activities), [activities]);
+  const years = useMemo(
+    () => getAvailableYears(page === 'compare' ? catalog.activities : activities),
+    [catalog, activities, page]
+  );
   const yearFiltered = useFilteredActivities(activities, 'all', year);
   const baseFiltered = useFilteredActivities(activities, filter, year);
   const filtered = useMemo(() => {
@@ -232,12 +249,18 @@ function Dashboard() {
       />
 
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-6">
-        <UserPicker
-          users={catalog.users}
-          selectedUserId={currentUser.user_id}
-          locale={locale}
-          onChange={chooseUser}
-        />
+        {page === 'compare' ? (
+          <span className="text-sm text-[var(--color-muted)]">
+            {locale === 'ja' ? '比較対象は画面内で選択' : 'Choose comparison users below'}
+          </span>
+        ) : (
+          <UserPicker
+            users={catalog.users}
+            selectedUserId={currentUser.user_id}
+            locale={locale}
+            onChange={chooseUser}
+          />
+        )}
         <span className="text-xs text-[var(--color-muted)]">
           {catalog.mode === 'public-preview'
             ? `公開用の統計データ · ${catalog.datePrecision === 'month' ? '年月のみ公開（日・週単位の統計は非表示）' : '正確な活動日時を公開承認済み'}`
@@ -256,14 +279,16 @@ function Dashboard() {
             {label}
           </button>
         ))}
-        <button
-          type="button"
-          aria-expanded={editingGoals}
-          onClick={() => setEditingGoals(value => !value)}
-          className="ml-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-1.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
-        >
-          {editingGoals ? '目標設定を閉じる' : '目標設定'}
-        </button>
+        {page !== 'compare' && (
+          <button
+            type="button"
+            aria-expanded={editingGoals}
+            onClick={() => setEditingGoals(value => !value)}
+            className="ml-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-1.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg)]"
+          >
+            {editingGoals ? '目標設定を閉じる' : '目標設定'}
+          </button>
+        )}
       </div>
       {/* One year selection controls every activity widget and page. */}
       <div
@@ -283,6 +308,11 @@ function Dashboard() {
                 if (page === 'summary' && summaryPeriod === 'life' && value !== null) {
                   setSummaryPeriod('year');
                 }
+                if (page === 'compare') {
+                  // Keep a selected month when changing years; all-years returns to Life.
+                  if (value === null) setComparisonPeriod('life');
+                  else if (comparisonPeriod === 'life') setComparisonPeriod('year');
+                }
                 setYear(value);
                 setCalendarNavigationMonth(null);
                 clearSelection();
@@ -297,7 +327,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {editingGoals && (
+      {editingGoals && page !== 'compare' && (
         <div className="px-4 sm:px-6">
           <GoalSettings
             key={currentUser.user_id}
@@ -324,7 +354,23 @@ function Dashboard() {
           </main>
         }
       >
-        {page === 'summary' ? (
+        {page === 'compare' ? (
+          <ComparePage
+            users={catalog.users}
+            activities={catalog.activities}
+            filter={filter}
+            year={year}
+            period={comparisonPeriod}
+            datePrecision={catalog.datePrecision}
+            onPeriodChange={nextPeriod => {
+              setComparisonPeriod(nextPeriod);
+              setYear(nextPeriod === 'life'
+                ? null
+                : year ?? getAvailableYears(catalog.activities)[0] ?? new Date().getFullYear());
+              clearSelection();
+            }}
+          />
+        ) : page === 'summary' ? (
           <SummaryPage
             key={`${year ?? 'all'}-${filter}`}
             datePrecision={catalog.datePrecision}
