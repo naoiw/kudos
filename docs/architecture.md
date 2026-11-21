@@ -31,7 +31,7 @@ src/themes/dashboard/index.tsx
 
 - `src/static/activities.json`は未公開時の架空デモ用です。承認済み`preview.json`を読み込める場合はそちらを優先します。
 - v2のGPSチャンクは並列取得数に上限を設け、パス・形式・重複ID・取得失敗を検証します。壊れた公開v2データを架空の経路に置換することはしません。
-- GitHub Pagesは`main`のpushにより更新されますが、GASのソース同期・データPublishとは独立しています。
+- GitHub Pagesは`main`のpush、または`develop`のCI成功で本番・プレビューをまとめて再デプロイします。GASのソース同期・データPublishとは独立しています。
 
 ## 表示・状態の責務
 
@@ -53,6 +53,8 @@ src/themes/dashboard/index.tsx
 | `src/components/ComparePage.tsx` | 2人以上のユーザーを選択し、活動回数・距離・活動時間・都道府県数と距離推移を比較する画面 |
 | `src/core/prefectureRoutes.ts`、`src/core/countryRoutes.ts` | GPSと日本の都道府県／世界の国・地域境界の照合 |
 | `src/components/RouteMapCanvas.tsx` | Leaflet地図と選択経路の描画、OpenStreetMapタイルの表示 |
+| `src/core/routeDensity.ts`、`src/workers/routeDensity.worker.ts` | 既存のGPS Polylineをグリッド単位で集約。アクティビティ内の重複通過を1回に数え、Workerで計算する |
+| `src/components/RouteDensityOverlay.tsx` | Leafletのズーム・移動に追従する非インタラクティブCanvasで通過頻度を描画する |
 | `src/core/trackGeometry.ts` | ルート一覧のEncoded Polyline→サムネイル形状生成 |
 | `src/core/goals.ts` | 初期目標と`localStorage`のユーザー別目標の読み書き |
 
@@ -66,6 +68,14 @@ src/themes/dashboard/index.tsx
 - 比較ページは年候補を**全公開ユーザー**の活動から生成し、Lifeは全期間に揃えます。特定年を選ぶと年比較となり、月比較はその年と選択月に限定します。選択されたユーザーごとに`user_id`で絞った活動から集計し、ユーザー間の活動・経路を混ぜません。年月のみ公開の場合も月次までを表示し、架空の日別推移は描きません。
 - 比較画面に認証やユーザー検索APIはありません。読み込まれた公開manifestの`users`からのみ選択でき、非公開データを要求しません。公開サイト全体は認証不要なので、アクセス制限を導入するまでは実GPSに公開許可が必要です。
 
+### 密度マップのデータ境界
+
+- Dashboardの`RouteMap`には選択ユーザー、年、種目、地域で絞った`filtered`だけを渡します。密度Workerに送るのは**この配列のEncoded Polylineだけ**で、別ユーザーの経路を横断して取得しません。
+- 訪問数はWeb Mercator zoom 14の12pxグリッド（日本では概ね80m）単位で1アクティビティにつき1回までとします。線分が通った区画を検出し、トラックの欠損や極端なGPSジャンプを別扱いにします。日単位・速度などのデータは公開しません。
+- Workerはフィルター切替・地図アンマウント時にterminateし、古い計算結果を反映しません。描画はCanvasとLeafletの移動イベントを使い、地図の操作をブロックしません。
+- 現在は既存manifest v2の経路をフロント側で読み込みます。Issue #19の遅延取得・#20の事前地域集計は別途対応し、Sheet／GASの変更は本機能に含めません。
+- 地図の濃淡はGPSが公開されている前提です。訪問が多い場所や起終点から生活拠点が推測され得るため、公開許可と必要な秘匿処理を先に検討してください。
+
 ## 公開JSONの取り扱い
 
 - `schema_version=2`：`users`・`activities`・`route_chunks`を含むmanifestと、GPSを保管した別チャンクを使用します。`schema_version=1`も読み込み互換を保ちます。
@@ -74,6 +84,14 @@ src/themes/dashboard/index.tsx
 - `date_precision=month`は`YYYY-MM`のみ。`exact`は活動ユーザーの設定タイムゾーンに基づく現地日時。公開サイトは現在`exact`データを保持しています。切替にはGAS承認と手動Publishが必要です。
 - GPSはEncoded Polylineとして公開します。`location_country`が`null`でも足跡判定が可能ですが、簡略化された国境や小島では誤差が生じ得ます。
 - `average_heartrate`は旧JSONとの互換フィールドとして残しますが、画面では使用しません。
+
+## GitHub Pages本番／プレビュー構成
+
+- `.github/workflows/check.yml`は`develop`のpushと`main`／`develop`宛のPRを検査します。`develop`が成功した時、デフォルトブランチ上の信頼されたデプロイWorkflowが`workflow_run`で起動します。
+- `.github/workflows/deploy.yml`は両ブランチを別々にcheckoutし、Viteの`PATH_PREFIX`を本番`/kudos`・プレビュー`/kudos/develop`としてビルドします。`site/index.html`と`site/develop/index.html`を**同一Pages成果物**に格納するため、片方のデプロイがもう片方を消すことはありません。
+- プレビューの`public/data/`は`main`の公開承認済みデータで上書きしてからビルドします。`develop`の未承認GPSファイルやPublish変更は本番／プレビューのデプロイに反映しません。ただし**developブランチ自体も公開GitHubリポジトリ上に存在する**ため、秘密のファイルをコミットしてはいけません。
+- `public/404.html`はアクセスURLが`/kudos/develop/`で始まるとプレビューのindexへ戻し、sessionStorageの経路を復元します。
+- `develop`に未公開機能が含まれる場合、`develop`ブランチ全体を`main`へマージする運用を禁止します。個別の承認済みPRだけを取り込みます。
 
 ## 開発と検証
 

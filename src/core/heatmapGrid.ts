@@ -3,6 +3,16 @@ import { mondayFirstWeekdayIndex } from './heatmapWeek';
 import { parseMovingTime } from './hooks/useActivities';
 import { groupActivitiesByLocalDay } from './activityDays';
 
+
+/**
+ * Compare calendar-day strings in the viewer's local timezone (not UTC).
+ * ISO YYYY-MM-DD sorts lexicographically and avoids midnight timezone shifts.
+ */
+export function isFutureHeatmapDay(day: string, today = new Date()): boolean {
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return day > localToday;
+}
+
 // Pure date/metric transformations are separate from the large heatmap UI.
 // Map any activity type to the 4 display categories
 export function toDisplayType(type: string): 'Walk' | 'Ride' | 'Golf' | 'Training' {
